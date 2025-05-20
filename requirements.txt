@@ -1,0 +1,33 @@
+# requirements.txt
+# Liste des bibliothèques à installer pour exécuter le projet
+
+# Traitement de données et calculs
+numpy
+
+# Affichage graphique et visualisation
+matplotlib
+plotly
+
+# Traitement vidéo
+opencv-python
+
+# Interface utilisateur
+streamlit
+streamlit-authenticator
+
+# Manipulation de fichiers JSON
+pandas
+
+# Modèles de pose (MediaPipe si besoin temporairement)
+mediapipe
+
+# Export PDF / PPT (selon ta future implémentation)
+reportlab
+python-pptx
+
+# Si tu veux lancer OpenPose depuis Python via subprocess (optionnel)
+# subprocess (intégré à Python, donc pas besoin d'installation)
+
+# Si tu utilises VideoPose3D (installer à part depuis GitHub)
+# torch (doit être installé manuellement si VideoPose3D est prévu)
+# torch==2.0.1 (ou selon ta version)
