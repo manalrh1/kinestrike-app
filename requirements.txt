@@ -7,3 +7,4 @@ plotly
 opencv-python-headless
 reportlab
 python-pptx
+moviepy
