@@ -1,0 +1,115 @@
+:root {
+  --primary: #c1121f; /* Rouge profond */
+  --accent: #ffe0e9;  /* Rose clair pastel */
+  --bg: #fdfdfd;      /* Fond principal */
+  --card: #ffffff;    /* Fond des cartes */
+  --text: #333333;    /* Texte par défaut */
+  --gold-gradient: linear-gradient(45deg, #ffcc00, #ffd700); /* Dégradé doré */
+}
+
+/* Fond principal */
+.stApp {
+  background-color: var(--bg);
+  color: var(--text);
+  max-width: 100%;
+  padding: 0;
+}
+
+/* Masquer le header par défaut Streamlit */
+header {
+  display: none;
+}
+
+/* Contenu principal mobile */
+.main-content {
+  margin-top: 60px;
+  padding: 16px;
+  padding-bottom: 80px; /* Espace pour la bottom nav */
+}
+
+/* Cartes stylées pour mobile */
+.mobile-card {
+  background: var(--card);
+  border-left: 6px solid var(--primary);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Boutons principaux stylisés */
+.stButton > button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  transition: 0.2s ease;
+}
+
+.stButton > button:hover {
+  background: #a30e18;
+}
+
+/* Inputs propres */
+.stTextInput input,
+.stSelectbox select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+/* Barre de navigation fixe en bas */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--accent);
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  border-top: 1px solid #ddd;
+  z-index: 999;
+}
+
+/* Éléments de la nav */
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  color: var(--primary);
+  font-size: 13px;
+}
+
+/* État actif (texte doré dégradé) */
+.nav-item.active {
+  background: linear-gradient(45deg, #ffcc00, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+}
+
+
+
+/* Icône de la nav */
+.nav-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 12px;
+  }
+
+  .stTextInput input {
+    font-size: 16px !important;
+  }
+}
