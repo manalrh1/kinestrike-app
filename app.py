@@ -198,9 +198,9 @@ Pour garantir une analyse fiable et précise, merci de respecter **les condition
 # ÉTAPE 3 : Vidéo – upload ou enregistrement direct
 # --------------------
 elif st.session_state.etape == 3:
-    import io
-    import base64
     import streamlit as st
+    from video_utils import charger_video_convertie
+    import io
     import streamlit.components.v1 as components
 
     st.markdown("<h2 style='text-align:center;'>🎥 Vidéo du tir</h2>", unsafe_allow_html=True)
@@ -211,26 +211,23 @@ elif st.session_state.etape == 3:
         horizontal=True
     )
 
-    # ========= OPTION 1 : Importer une vidéo ========
+    # ========= OPTION 1 : Importer tous formats vidéo (conversion automatique) ========
     if choix == "📁 Importer une vidéo":
-        video_file = st.file_uploader("Importer une vidéo MP4 (⚠️ .mov non supporté)", type=["mp4", "mpeg4"])
+        chemin_fichier = charger_video_convertie()
 
-        if video_file:
-            # Vérifie le type MIME pour éviter QuickTime
-            if video_file.type in ["video/quicktime"]:
-                st.error("❌ Format non supporté : les fichiers `.mov` (QuickTime) ne sont pas autorisés. Merci de convertir en `.mp4`.")
-            else:
-                st.session_state.video_bytes = io.BytesIO(video_file.read())
+        if chemin_fichier:
+            with open(chemin_fichier, "rb") as f:
+                st.session_state.video_bytes = io.BytesIO(f.read())
 
-                col1, col2, col3 = st.columns([3, 2, 3])
-                with col2:
-                    st.video(st.session_state.video_bytes)
+            col1, col2, col3 = st.columns([3, 2, 3])
+            with col2:
+                st.video(st.session_state.video_bytes)
 
-                if st.button("➡️ Suivant : Moments clés"):
-                    st.session_state.etape = 4
-                    st.rerun()
+            if st.button("➡️ Suivant : Moments clés"):
+                st.session_state.etape = 4
+                st.rerun()
         else:
-            st.info("Aucune vidéo sélectionnée.")
+            st.info("Aucune vidéo sélectionnée ou échec de conversion.")
 
     # ========= OPTION 2 : Enregistrement direct via webcam =========
     elif choix == "🎥 Enregistrer avec la caméra":
@@ -296,6 +293,7 @@ elif st.session_state.etape == 3:
 
         if base64_video and "video_bytes" not in st.session_state:
             try:
+                import base64
                 st.info("🎥 Traitement de la vidéo en cours...")
                 video_data = base64.b64decode(base64_video)
                 st.session_state.video_bytes = io.BytesIO(video_data)

@@ -1,0 +1,29 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# 📦 Environnements
+.venv/
+env/
+ENV/
+
+# 📁 Données et modèles
+*.pt
+*.pkl
+*.h5
+*.csv
+
+# 📽️ Vidéos et médias lourds
+*.mp4
+*.avi
+*.mov
+
+# 📄 Autres lourds
+*.ttf
+
+# 🔒 Cache et logs
+*.log
+*.DS_Store
