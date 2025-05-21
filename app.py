@@ -213,23 +213,26 @@ elif st.session_state.etape == 3:
 
     # ========= OPTION 1 : Importer une vidéo ========
     if choix == "📁 Importer une vidéo":
-        st.markdown("##### 📼 Importer une vidéo (MP4 recommandé)")
-
         video_file = st.file_uploader(
             "Importer une vidéo",
-            type=["mp4", "webm", "avi", "mpeg", "mkv"]
+            type=["mp4", "webm", "avi", "mpeg", "mpg", "mkv", "mpeg4"],
+            help="Formats pris en charge : MP4, AVI, WEBM, MKV, etc."
         )
 
         if video_file:
-            st.session_state.video_bytes = io.BytesIO(video_file.read())
+            if video_file.type == "video/quicktime":
+                st.error("❌ Format non supporté : les fichiers `.mov` ne peuvent pas être lus ici.")
+                st.info("💡 Convertissez votre vidéo ici : [cloudconvert.com/mov-to-mp4](https://cloudconvert.com/mov-to-mp4)")
+            else:
+                st.session_state.video_bytes = io.BytesIO(video_file.read())
 
-            col1, col2, col3 = st.columns([3, 2, 3])
-            with col2:
-                st.video(st.session_state.video_bytes)
+                col1, col2, col3 = st.columns([3, 2, 3])
+                with col2:
+                    st.video(st.session_state.video_bytes)
 
-            if st.button("➡️ Suivant : Moments clés"):
-                st.session_state.etape = 4
-                st.rerun()
+                if st.button("➡️ Suivant : Moments clés"):
+                    st.session_state.etape = 4
+                    st.rerun()
         else:
             st.info("Aucune vidéo sélectionnée.")
 
@@ -306,12 +309,11 @@ elif st.session_state.etape == 3:
             except Exception as e:
                 st.error(f"Erreur de traitement vidéo : {e}")
 
-    # === Bouton de retour
+    # === Bouton retour
     st.markdown("---")
     if st.button("⬅️ Retour à l'étape précédente", use_container_width=True):
         st.session_state.etape = 2
         st.rerun()
-
 
 # --------------------
 # ÉTAPE 4 : Geste technique & Sélection frames
