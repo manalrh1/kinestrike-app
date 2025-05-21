@@ -25,17 +25,66 @@ if "etape" not in st.session_state:
 # ÉTAPE 0 : Accueil
 # --------------------
 if st.session_state.etape == 0:
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.image("img.png", width=200)
+    st.markdown(
+        """
+        <style>
+            .centered {
+                text-align: center;
+                padding-top: 30px;
+            }
+            .logo-img {
+                width: 160px;
+                margin-bottom: 15px;
+            }
+            .main-title {
+                font-size: 36px;
+                font-weight: bold;
+                color: #B30000; /* rouge foncé */
+                margin-bottom: 8px;
+            }
+            .subtitle {
+                color: #FFC300; /* doré */
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+            .description {
+                background-color: #ffe6f0; /* rose clair */
+                padding: 20px;
+                border-radius: 10px;
+                font-size: 16px;
+                max-width: 600px;
+                margin: auto;
+                text-align: left;
+            }
+            .start-button {
+                display: flex;
+                justify-content: center;
+                margin-top: 25px;
+            }
+        </style>
+
+        <div class="centered">
+            <img src="img.png" class="logo-img" />
+            <div class="main-title">KinéStrike</div>
+            <div class="subtitle">Analyse biomécanique des gestes sportifs</div>
+        </div>
+
+        <div class="description">
+            Cette application vous permet de :
+            <ul>
+                <li>📹 Segmenter automatiquement les phases d’un geste</li>
+                <li>📊 Mesurer les vitesses, amplitudes et postures</li>
+                <li>❗ Détecter les écarts biomécaniques</li>
+                <li>📝 Générer un rapport PDF détaillé</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3 = st.columns([2, 2, 2])
     with col2:
-        st.markdown("<h2 style='font-size: 40px;'>🧠 KinéStrike –<br>Analyse Biomécanique du Tir</h2>", unsafe_allow_html=True)
-        st.markdown("""Cette plateforme vous permet de :
-- 🎯 Détecter automatiquement les phases du tir
-- 📐 Mesurer les paramètres biomécaniques
-- 🤖 Identifier les erreurs techniques
-- 📄 Générer un rapport PDF personnalisé""")
-        if st.button("🚀 Démarrer l’analyse"):
+        if st.button("🚀 Démarrer l’analyse", use_container_width=True):
             st.session_state.etape = 1
             st.rerun()
 
