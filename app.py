@@ -63,7 +63,7 @@ if st.session_state.etape == 0:
         </style>
         <div class="centered-container">
             <img src="https://raw.githubusercontent.com/manalrh1/kinestrike-app/main/img.png" width="250">
-            <div class="title">🧠 KinéStrike – Analyse du Geste Sportif</div>
+            <div class="title">Analyse du Geste Sportif</div>
             <div class="desc">
                 Bienvenue dans votre assistant d’analyse du mouvement :
                 <ul style="text-align: left;">
