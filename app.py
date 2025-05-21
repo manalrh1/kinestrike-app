@@ -25,68 +25,60 @@ if "etape" not in st.session_state:
 # ÉTAPE 0 : Accueil
 # --------------------
 if st.session_state.etape == 0:
-    st.markdown(
-        """
+    # === Personnalisation CSS
+    st.markdown("""
         <style>
-            .centered {
-                text-align: center;
-                padding-top: 30px;
-            }
-            .logo-img {
-                width: 160px;
-                margin-bottom: 15px;
-            }
-            .main-title {
-                font-size: 36px;
-                font-weight: bold;
-                color: #B30000; /* rouge foncé */
-                margin-bottom: 8px;
-            }
-            .subtitle {
-                color: #FFC300; /* doré */
-                font-size: 20px;
-                margin-bottom: 20px;
-            }
-            .description {
-                background-color: #ffe6f0; /* rose clair */
-                padding: 20px;
-                border-radius: 10px;
-                font-size: 16px;
-                max-width: 600px;
-                margin: auto;
-                text-align: left;
-            }
-            .start-button {
-                display: flex;
-                justify-content: center;
-                margin-top: 25px;
-            }
+        .centered-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 85vh;
+        }
+        .title {
+            color: #b22222; /* rouge clair/doré */
+            font-size: 40px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .description {
+            text-align: center;
+            color: #444;
+            font-size: 18px;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+        .button-container {
+            margin-top: 30px;
+        }
         </style>
+    """, unsafe_allow_html=True)
 
-        <div class="centered">
-            <img src="img.png" class="logo-img" />
-            <div class="main-title">KinéStrike</div>
-            <div class="subtitle">Analyse biomécanique des gestes sportifs</div>
-        </div>
+    # === Contenu principal
+    st.markdown('<div class="centered-container">', unsafe_allow_html=True)
 
+    st.image("img.png", width=200)
+
+    st.markdown('<div class="title">🧠 KinéStrike – Analyse du Geste Sportif</div>', unsafe_allow_html=True)
+
+    st.markdown("""
         <div class="description">
-            Cette application vous permet de :
-            <ul>
-                <li>📹 Segmenter automatiquement les phases d’un geste</li>
-                <li>📊 Mesurer les vitesses, amplitudes et postures</li>
-                <li>❗ Détecter les écarts biomécaniques</li>
-                <li>📝 Générer un rapport PDF détaillé</li>
-            </ul>
+        Bienvenue dans votre assistant d’analyse du mouvement :
+        <ul>
+        <li>🎯 Segmentation automatique des phases du geste</li>
+        <li>📐 Calculs biomécaniques & posturaux</li>
+        <li>🤖 Détection d’erreurs techniques</li>
+        <li>📄 Rapport PDF complet</li>
+        </ul>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([2, 2, 2])
-    with col2:
-        if st.button("🚀 Démarrer l’analyse", use_container_width=True):
-            st.session_state.etape = 1
-            st.rerun()
+    if st.button("🚀 Démarrer", use_container_width=True):
+        st.session_state.etape = 1
+        st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --------------------
 # ÉTAPE 1 : Connexion
