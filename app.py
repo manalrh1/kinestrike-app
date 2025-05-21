@@ -198,9 +198,9 @@ Pour garantir une analyse fiable et précise, merci de respecter **les condition
 # ÉTAPE 3 : Vidéo – upload ou enregistrement direct
 # --------------------
 elif st.session_state.etape == 3:
-    import streamlit as st
-    from video_utils import charger_video_convertie
     import io
+    import base64
+    import streamlit as st
     import streamlit.components.v1 as components
 
     st.markdown("<h2 style='text-align:center;'>🎥 Vidéo du tir</h2>", unsafe_allow_html=True)
@@ -211,13 +211,17 @@ elif st.session_state.etape == 3:
         horizontal=True
     )
 
-    # ========= OPTION 1 : Importer tous formats vidéo (conversion automatique) ========
+    # ========= OPTION 1 : Importer une vidéo ========
     if choix == "📁 Importer une vidéo":
-        chemin_fichier = charger_video_convertie()
+        st.markdown("##### 📼 Importer une vidéo (MP4 recommandé)")
 
-        if chemin_fichier:
-            with open(chemin_fichier, "rb") as f:
-                st.session_state.video_bytes = io.BytesIO(f.read())
+        video_file = st.file_uploader(
+            "Importer une vidéo",
+            type=["mp4", "webm", "avi", "mpeg", "mkv"]
+        )
+
+        if video_file:
+            st.session_state.video_bytes = io.BytesIO(video_file.read())
 
             col1, col2, col3 = st.columns([3, 2, 3])
             with col2:
@@ -227,7 +231,7 @@ elif st.session_state.etape == 3:
                 st.session_state.etape = 4
                 st.rerun()
         else:
-            st.info("Aucune vidéo sélectionnée ou échec de conversion.")
+            st.info("Aucune vidéo sélectionnée.")
 
     # ========= OPTION 2 : Enregistrement direct via webcam =========
     elif choix == "🎥 Enregistrer avec la caméra":
@@ -293,7 +297,6 @@ elif st.session_state.etape == 3:
 
         if base64_video and "video_bytes" not in st.session_state:
             try:
-                import base64
                 st.info("🎥 Traitement de la vidéo en cours...")
                 video_data = base64.b64decode(base64_video)
                 st.session_state.video_bytes = io.BytesIO(video_data)
@@ -308,6 +311,7 @@ elif st.session_state.etape == 3:
     if st.button("⬅️ Retour à l'étape précédente", use_container_width=True):
         st.session_state.etape = 2
         st.rerun()
+
 
 # --------------------
 # ÉTAPE 4 : Geste technique & Sélection frames
