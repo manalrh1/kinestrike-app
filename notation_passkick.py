@@ -1,3 +1,5 @@
+#notation_passkick.py
+
 import numpy as np
 from parametres_spatiaux import calculer_position_pied_appui
 from biomeca import get_joint_angles, evaluer_orientation_pied

@@ -3,6 +3,29 @@ import streamlit as st
 def afficher_sidebar_profil():
     from data_storage import get_joueuses_par_coach
 
+    # 🌈 Appliquer style rouge clair à la sidebar
+    st.markdown("""
+        <style>
+            section[data-testid="stSidebar"] {
+                background-color: #ffe5e5;  /* Rouge très clair */
+                padding: 1rem;
+            }
+            .stButton>button {
+                background-color: #cc4e4e;
+                color: white;
+                font-weight: bold;
+                padding: 0.6em 1.5em;
+                font-size: 16px;
+                border-radius: 8px;
+                border: none;
+                margin-bottom: 8px;
+            }
+            .stButton>button:hover {
+                background-color: #b73737;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     with st.sidebar:
         st.markdown("## 👤 Profil")
         st.write(f"**Nom :** {st.session_state.get('name', 'Coach')}")
@@ -17,7 +40,6 @@ def afficher_sidebar_profil():
                 st.rerun()
 
         st.markdown("---")
-        # ✅ Ajout de clé unique ici
         if st.button("🔓 Se déconnecter", key="btn_logout"):
             st.session_state.clear()
             st.rerun()

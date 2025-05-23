@@ -468,7 +468,7 @@ def analyse_biomeca_passe():
         tmp.write(st.session_state.video_bytes.getbuffer())
         video_path = tmp.name
 
-    t1, t2, t3 = st.session_state.frame_kick, st.session_state.frame_impact, st.session_state.frame_postimpact
+    t2 = st.session_state.frame_impact
     pied = st.session_state.pied_frappe.lower()
     ball_path = st.session_state.get("ball_position_path", None)
 
@@ -480,7 +480,6 @@ def analyse_biomeca_passe():
     angles = donnees["angles_all"][t2]
     v_lin = calculer_vitesses_lineaires(donnees["keypoints_all"])
 
-    # PARAMÈTRES CLÉS
     dx, dy = calculer_position_pied_appui(keypoints[t2], pied)
     note_placement, msg_placement = noter_placement_pied(dx, dy)
     note_angles, msg_angles = noter_angles(angles)
@@ -492,7 +491,6 @@ def analyse_biomeca_passe():
     ballon_coord = donnees["ball"][t2] if "ball" in donnees and t2 in donnees["ball"] else None
     note_contact, msg_contact = noter_contact_medial(cheville_coord, pied_coord, ballon_coord)
 
-    # SCORE GLOBAL
     notes = {
         "placement": note_placement,
         "angles": note_angles,
@@ -501,7 +499,6 @@ def analyse_biomeca_passe():
     }
     score_global = calculer_score_global(notes)
 
-    # RECOMMANDATIONS + SYNTHÈSE
     recommandations = generer_recommandations_passkick({
         "dx": dx,
         "dy": dy,
@@ -514,7 +511,6 @@ def analyse_biomeca_passe():
     titre, synthese = generer_recommandation_globale_passkick(score_global)
     points_forts, points_a_corriger = generer_analyse_qualitative_passkick(notes)
 
-    # AFFICHAGE
     st.success(f"🎯 Score final : **{score_global}/10**")
     st.subheader("📈 Notes par critère")
     st.write(f"- Placement du pied : {note_placement}/10 – {msg_placement}")
@@ -540,8 +536,9 @@ def analyse_biomeca_passe():
         for phase, erreur, reco in recommandations:
             st.markdown(f"**[{phase}]** {erreur} → _{reco}_")
 
-    # VISUALISATION
-    phases = segmenter_kick(len(keypoints), t1, t2, t3)
+    # Générer des phases minimales fictives pour visualiser
+    phases = segmenter_kick(len(keypoints), t2 - 5, t2, t2 + 5)
+
     video_out_path = generer_video_annotee(video_path, keypoints, phases, pied)
     pose_path = enregistrer_image_pose(keypoints, t2, video_path)
     graph1, graph2 = tracer_graphiques_vitesses(v_lin, phases, pied)
@@ -562,7 +559,7 @@ def analyse_biomeca_passe():
     with col3:
         st.image(graph2, caption="Évolution du pied", use_container_width=True)
 
-    # RAPPORT
+    # Rapport
     st.markdown("### 📄 Rapport PDF")
     nom_joueuse = st.session_state.joueuse_selectionnee
     type_long = st.session_state.type_geste.strip()
@@ -583,8 +580,8 @@ def analyse_biomeca_passe():
     date_str = datetime.now().strftime("%Y%m%d")
     nom_pdf = f"rapport_{label_type_geste.lower()}_{nom_fichier_base}_{date_str}.pdf"
 
-    notes_par_phase = notes  # correspondance attendue par le générateur
-    details_score = {}       # tu peux remplir si tu veux détailler par pondération
+    notes_par_phase = notes
+    details_score = {}
     synthese_globale = synthese
 
     if st.button("📥 Télécharger le rapport PDF", use_container_width=True):
@@ -601,7 +598,7 @@ def analyse_biomeca_passe():
             graphe2=graph2,
             nom_fichier=nom_pdf,
             nom_joueuse=nom_joueuse,
-            type_geste=label_type_geste  # nouveau paramètre utilisé dans le rapport
+            type_geste=label_type_geste
         )
         with open(rapport_path, "rb") as f:
             st.download_button(

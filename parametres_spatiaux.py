@@ -45,13 +45,13 @@ def verifier_angle_approche(angle):
     Vérifie si l'angle d'approche est dans l'intervalle optimal [30°, 45°] selon Isokawa & Lees (1988).
     """
     if angle is None:
-        return "⚠️ Angle non mesurable"
+        return  " Angle non mesurable"
     elif 30 <= angle <= 45:
-        return "✅ Angle optimal (30°–45°)"
+        return " Angle optimal (30°–45°)"
     elif 25 <= angle < 30 or 45 < angle <= 50:
-        return "⚠️ Légèrement dévié de l'optimal"
+        return  " Légèrement dévié de l'optimal"
     else:
-        return "❌ Angle inapproprié"
+        return " Angle inapproprié"
 
 
 # ============================================================================
@@ -76,11 +76,11 @@ def verifier_placement_pied(dx, dy):
     Vérifie si les distances dx et dy sont dans les fourchettes optimales définies par Hay (1985).
     """
     if 20 <= dx <= 40 and 20 <= dy <= 112:
-        return "✅ Placement optimal"
+        return " Placement optimal"
     elif 15 <= dx <= 50 and 10 <= dy <= 130:
-        return "⚠️ Placement acceptable"
+        return " Placement acceptable"
     else:
-        return "❌ Placement incorrect"
+        return " Placement incorrect"
 
 
 # ============================================================================

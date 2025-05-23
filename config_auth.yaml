@@ -1,0 +1,24 @@
+credentials:
+  usernames:
+    ibtissam:
+      email: ibtissam@club.com
+      name: Coach Ibtissam
+      password: "$2b$12$8jxPhKFRkdbUZ3ulUL09Quq2NvXzDncGnFDJUK7HHPtDPd.AN1SPa"
+      categories: ["U15"]
+
+    chaimaa:
+      email: chaimaa@club.com
+      name: Coach Chaimaa
+      password: "$2b$12$9bhBpb8gPZkz7DwLh0Bqe.FnS/hEexEzSDxXK/MKXxGnV2m2I5OES"
+      categories: ["U13", "U15"]
+
+    redouane:
+      email: redouane@club.com
+      name: Coach Redouane
+      password: "$2b$12$PTkVCYucGp7XjKoGIKW74OJbz3cw3NU/5nZC9iAN8vuPExul2OxFS"
+      categories: ["U17"]
+
+cookie:
+  name: kinéstrike_auth
+  key: secret_key_for_cookie
+  expiry_days: 7
