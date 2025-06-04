@@ -1,6 +1,9 @@
 import numpy as np
 import cv2
 
+import numpy as np
+import cv2
+
 # === A. FPS automatique ===
 def get_fps_from_video(video_path):
     cap = cv2.VideoCapture(video_path)
@@ -8,66 +11,30 @@ def get_fps_from_video(video_path):
     cap.release()
     return fps if fps and fps > 0 else 30
 
-# === B. Échelle px→m automatique ===
-def estimer_px_to_m_depuis_hanche_genou(keypoints, pied_frappe='droit', categorie='U17'):
-    """
-    Estime la conversion pixel → mètre en se basant sur la distance hanche-genou.
-    Catégories possibles : U13, U15, U17, Seniors
-    """
-    tailles_reelles = {'U13': 0.32, 'U15': 0.36, 'U17': 0.41, 'Seniors': 0.45}
-
-    if pied_frappe == 'droit':
-        idx_hanche, idx_genou = 9, 10
-    else:
-        idx_hanche, idx_genou = 12, 13
-
-    # Vérification de l'existence des points
-    try:
-        hanche = np.array(keypoints[idx_hanche])
-        genou = np.array(keypoints[idx_genou])
-    except IndexError:
-        return None
-
-    # Vérifie la validité des coordonnées
-    if -1 in hanche or -1 in genou:
-        return None
-
-    # Distance en pixels
-    pixels = np.linalg.norm(hanche - genou)
-    if pixels == 0:
-        return None
-
-    taille_physique = tailles_reelles.get(categorie, 0.4)  # fallback 40 cm
-
-    px_to_m = taille_physique / pixels
-
-    # Contrôle de vraisemblance
-    if not 0.001 <= px_to_m <= 0.05:
-        return None
-
-    return px_to_m
-
-# === C. Vitesse linéaire (m/s) ===
-import numpy as np
-
-def calculer_vitesses_lineaires(keypoints_all, pied_frappe='droit', px_to_m=1.0, fps=30, max_vitesse_m_s=30, lissage=True):
+# === B. Vitesse linéaire (px/s) ===
+def calculer_vitesses_lineaires(keypoints_all, pied_frappe='droit', fps=30, max_vitesse_px=500, lissage=True):
     idx = {'droit': {'hanche': 9, 'genou': 10, 'cheville': 11},
            'gauche': {'hanche': 12, 'genou': 13, 'cheville': 14}}[pied_frappe]
 
     vitesses = {art: [] for art in idx}
 
-    for i in range(1, len(keypoints_all)):
+    for i in range(len(keypoints_all)):
         for art, point_idx in idx.items():
-            p1 = np.array(keypoints_all[i - 1][point_idx])
-            p2 = np.array(keypoints_all[i][point_idx])
-
-            if -1 in p1 or -1 in p2:
+            if i == 0 or i == len(keypoints_all) - 1:
                 vitesses[art].append(np.nan)
                 continue
 
-            v = np.linalg.norm(p2 - p1) * px_to_m * fps
+            p_before = np.array(keypoints_all[i - 1][point_idx])
+            p_after = np.array(keypoints_all[i + 1][point_idx])
 
-            if v > max_vitesse_m_s:
+            if -1 in p_before or -1 in p_after:
+                vitesses[art].append(np.nan)
+                continue
+
+            distance = np.linalg.norm(p_after - p_before)
+            v = distance / (2 / fps)  # ✅ px/s
+
+            if v > max_vitesse_px:
                 vitesses[art].append(np.nan)
             else:
                 vitesses[art].append(v)
@@ -78,23 +45,26 @@ def calculer_vitesses_lineaires(keypoints_all, pied_frappe='droit', px_to_m=1.0,
 
     return vitesses
 
+# === C. Lissage
 def __smooth(v, k=3):
     v = np.array(v)
     mask = ~np.isnan(v)
+    if not np.any(mask): return v
     v_filled = np.copy(v)
     v_filled[~mask] = np.interp(np.flatnonzero(~mask), np.flatnonzero(mask), v[mask])
     return np.convolve(v_filled, np.ones(k)/k, mode='same')
 
-
-# === D. Vitesse angulaire (rad/s) ===
+# === D. Vitesse angulaire (°/s)
 def calculer_vitesses_angulaires(angles_par_frame, pied_frappe='droit', fps=30):
     cuisse_key, jambe_key = f'hanche_{pied_frappe}', f'genou_{pied_frappe}'
     cuisse = [f.get(cuisse_key, np.nan) for f in angles_par_frame]
     jambe = [f.get(jambe_key, np.nan) for f in angles_par_frame]
     vit_ang = {'cuisse': [], 'jambe': []}
+
     for i in range(1, len(cuisse)):
-        vit_ang['cuisse'].append(abs(cuisse[i] - cuisse[i - 1]) * np.pi / 180 * fps if not np.isnan(cuisse[i]) and not np.isnan(cuisse[i-1]) else np.nan)
-        vit_ang['jambe'].append(abs(jambe[i] - jambe[i - 1]) * np.pi / 180 * fps if not np.isnan(jambe[i]) and not np.isnan(jambe[i-1]) else np.nan)
+        vit_ang['cuisse'].append(abs(cuisse[i] - cuisse[i - 1]) * fps if not np.isnan(cuisse[i]) and not np.isnan(cuisse[i - 1]) else np.nan)
+        vit_ang['jambe'].append(abs(jambe[i] - jambe[i - 1]) * fps if not np.isnan(jambe[i]) and not np.isnan(jambe[i - 1]) else np.nan)
+
     return vit_ang
 
 # === 2. Découpage phases ===
@@ -195,3 +165,4 @@ def verifier_timing_impact(vitesses_pied, t2):
         return "⚠️ Pic proche mais décalé [partiel]"
     else:
         return f"❌ Pic à frame {pic_index}, attendu à {attendu} [incorrect]"
+

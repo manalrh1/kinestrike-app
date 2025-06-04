@@ -34,7 +34,6 @@ def analyse_biomeca_inside():
         detecter_postures_anotees
     )
 
-    st.markdown("<h2 style='text-align:center;'>📊 Étape 7 : Analyse biomécanique complète – Inside</h2>", unsafe_allow_html=True)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
         tmp.write(st.session_state.video_bytes.getbuffer())
@@ -225,7 +224,7 @@ def analyse_biomeca_instep():
     from datetime import datetime
     import streamlit as st
 
-    from biomeca import VALEURS_REF_instep, verifier_alignement_tronc_bassin
+    from biomeca import VALEURS_REF_instep, get_joint_angles, verifier_alignement_tronc_bassin
     from vitesses import (
         get_fps_from_video,
         decouper_activation_transfert,
@@ -233,7 +232,6 @@ def analyse_biomeca_instep():
         verifier_logique_vitesses_angulaires,
         verifier_suivi,
         verifier_timing_impact,
-        estimer_px_to_m_depuis_hanche_genou
     )
     from extraction import extraire_donnees_biomecaniques
     from notation_instep import (
@@ -250,28 +248,54 @@ def analyse_biomeca_instep():
     from rapport import generer_rapport_pdf
     from visualisation import (
         generer_video_annotee,
-        enregistrer_image_pose,
         tracer_graphiques_vitesses,
-        detecter_postures_anotees
+        detecter_postures_anotees,
+        tracer_radar_notes,
+        generer_animation_plotly
     )
     from segmentation_evenementielle import segmenter_kick
 
-    st.markdown("<h2 style='text-align:center;'>📊 Étape 7 : Analyse biomécanique complète – Instep</h2>", unsafe_allow_html=True)
-
+    # 1. Lecture de la vidéo
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
         tmp.write(st.session_state.video_bytes.getbuffer())
         video_path = tmp.name
 
-    t1, t2, t3 = st.session_state.frame_kick, st.session_state.frame_impact, st.session_state.frame_postimpact
+    t1 = st.session_state.get("frame_kick")
+    t2 = st.session_state.get("frame_impact")
+    t3 = st.session_state.get("frame_postimpact")
     pied = st.session_state.pied_frappe.lower()
     ball_path = st.session_state.get("ball_position_path", None)
 
+    # 🚨 Vérification des moments clés
+    if any(v is None for v in [t1, t2, t3]):
+        st.error("❌ Moments clés (kick, impact, suivi) non définis. Impossible de continuer l'analyse.")
+        return None, None, None
+
+    if not (t1 < t2 < t3):
+        st.error("❌ Les moments clés doivent être dans l'ordre : kick < impact < suivi.")
+        return None, None, None
+
+    # 2. Extraction des données biomécaniques
     if "donnees" not in st.session_state:
         st.session_state.donnees = extraire_donnees_biomecaniques(video_path, ball_path, pied)
     donnees = st.session_state.donnees
 
+    # 🚨 Sécurité immédiate : Vérifier qu'il y a bien des keypoints 3D
+    if donnees["keypoints_3d"] is None or len(donnees["keypoints_3d"]) == 0:
+        st.error("❌ Aucun keypoint 3D détecté dans la vidéo. Veuillez vérifier la qualité ou le format de votre vidéo.")
+        return None, None, None
+
+    # 3. Calcul des angles sur toutes les frames
+    donnees["angles_all"] = [get_joint_angles(frame) for frame in donnees["keypoints_3d"]]
+
+    # 4. Préparation des vitesses et phases
     fps = get_fps_from_video(video_path)
     frames_kick = list(range(t1, t2 + 1))
+
+    if t2 not in frames_kick:
+        st.error(f"❌ Frame d'impact {t2} absente de la phase kick-step.")
+        return None, None, None
+
     indices_par_phase = decouper_activation_transfert(frames_kick, t2)
 
     angles_approche = donnees["angles_all"][t1]
@@ -279,6 +303,7 @@ def analyse_biomeca_instep():
     angles_impact = donnees["angles_all"][t2]
     angles_suivi = donnees["angles_all"][t3] if t3 < len(donnees["angles_all"]) else {}
 
+    # 5. Notation biomécanique
     notes_approche = noter_angles_par_cote("approche", pied, angles_approche, VALEURS_REF_instep)
     notes_kickstep = noter_angles_par_cote("kickstep", pied, angles_kick, VALEURS_REF_instep)
     note_cheville_impact = noter_angles_par_cote("kickstep", pied, angles_impact, VALEURS_REF_instep).get("cheville", 0)
@@ -287,12 +312,12 @@ def analyse_biomeca_instep():
     eval_lin = verifier_logique_vitesses_lineaires(vit_lin, indices_par_phase)
     eval_ang = verifier_logique_vitesses_angulaires(vit_ang, indices_par_phase)
     suivi_eval = verifier_suivi(vit_ang, vit_lin, list(range(t2, t3)))
-    alignement_msg = verifier_alignement_tronc_bassin(donnees["keypoints_all"], list(range(t2, t3)), pied)
+    alignement_msg = verifier_alignement_tronc_bassin(donnees["keypoints_3d"], list(range(t2, t3)), pied)
     note_alignement = noter_evaluation_vitesse(alignement_msg)
     timing_msg = verifier_timing_impact(vit_lin["cheville"], t2)
     note_timing_impact = noter_evaluation_vitesse(timing_msg)
 
-    angle_approche, dx, dy = 40, 30, 35
+    angle_approche, dx, dy = 40, 30, 35  # À remplacer si calculé automatiquement
     note_angle_approche = noter_evaluation_vitesse("correct")
     note_pied_appui = noter_evaluation_vitesse("correct")
 
@@ -312,8 +337,9 @@ def analyse_biomeca_instep():
     })
     titre_global, synthese_globale = generer_recommandation_globale(round(score_global, 1))
 
+    # 6. Résultats
     st.success(f"🎯 Score final : **{score_global}/10**")
-    st.subheader("📈 Notes par phase")
+    st.subheader("📊 Notes par phase")
     for phase, note in notes_par_phase.items():
         st.write(f"- **{phase.capitalize()}** : {note}/10")
 
@@ -334,18 +360,22 @@ def analyse_biomeca_instep():
     for phase, erreur, reco in recommandations:
         st.markdown(f"**[{phase}]** {erreur} → _{reco}_")
 
-    total = len(donnees["keypoints_all"])
+    # 7. Segmentation
+    total = len(donnees["keypoints_3d"])
     phases = segmenter_kick(total, t1, t2, t3)
 
     frames_annotations = detecter_postures_anotees(
         notes_approche_angles=notes_approche,
         notes_kickstep_angles=notes_kickstep,
+        angles_approche=angles_approche,
+        angles_kickstep=angles_kick,
         ref_angles=VALEURS_REF_instep,
         t1=t1,
         t2=t2,
         pied_frappe=pied
     )
 
+    # 8. Génération vidéo annotée
     video_out_path = generer_video_annotee(
         video_path,
         donnees["keypoints_all"],
@@ -363,34 +393,37 @@ def analyse_biomeca_instep():
             with open(video_out_path, "rb") as f:
                 st.download_button("⬇️ Télécharger la vidéo annotée", f, file_name="video_annotee_instep.mp4")
 
-    # Estimation px_to_m selon la catégorie joueuse
-    categorie = st.session_state.get("categorie_joueuse", "U17")
-    px_to_m = None
-    for kp in donnees["keypoints_all"]:
-        px_to_m = estimer_px_to_m_depuis_hanche_genou(kp, pied_frappe=pied, categorie=categorie)
-        if px_to_m:
-            break
-    if not px_to_m:
-        px_to_m = 0.005  # fallback réaliste : 1px = 5mm
+    # 9. Animation 3D interactive
+    st.subheader("🧍‍♂️ Animation 3D du squelette avec angles articulaires")
+    fig = generer_animation_plotly(donnees["keypoints_3d"], donnees["angles_all"])
+    st.plotly_chart(fig, use_container_width=True)
 
-    pose_path = enregistrer_image_pose(donnees["keypoints_all"], t2, video_path)
+    # 10. Graphiques des vitesses
     graph1, graph2 = tracer_graphiques_vitesses(
         vitesses_lin_px=vit_lin,
         vitesses_ang=vit_ang,
         phases=phases,
         pied_frappe=pied,
         fps=fps,
-        px_to_m=px_to_m
+        pas_affichage=50
     )
 
-    st.subheader("📊 Visualisations graphiques")
-    col1, col2, col3 = st.columns([3, 2, 3])
-    with col1:
-        st.image(graph1, caption="Kick Step & Impact", use_container_width=True)
-    with col3:
-        st.image(graph2, caption="Évolution du pied", use_container_width=True)
+    st.subheader("📈 Visualisations graphiques")
+    st.markdown("#### ➤ Vitesses linéaires (cheville, genou, hanche)")
+    st.pyplot(graph1)
+    st.markdown("#### ➤ Vitesses angulaires (cuisse, jambe)")
+    st.pyplot(graph2)
 
-    st.markdown("### 📄 Rapport PDF")
+    # 11. Radar des scores
+    radar_path = tracer_radar_notes(notes_par_phase, output_path="graphes/radar_notes.png")
+    if os.path.exists(radar_path):
+        st.subheader("Radar des scores par phase")
+        col1, col2, col3 = st.columns([2, 3, 2])
+        with col2:
+            st.image(radar_path, use_container_width=True)
+
+    # 12. Rapport PDF
+    st.markdown("📄 Rapport PDF")
     nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
     type_long = st.session_state.type_geste.strip()
     GESTE_TO_LABEL = {
@@ -399,13 +432,11 @@ def analyse_biomeca_instep():
         "Passe intérieure du pied": "Passe"
     }
     label_type_geste = GESTE_TO_LABEL.get(type_long, "Tir")
-
-    nom_fichier_base = (
-        nom_joueuse.replace(" ", "_")
-        .replace("(", "").replace(")", "").replace("'", "").lower()
-    )
+    nom_fichier_base = nom_joueuse.replace(" ", "_").replace("(", "").replace(")", "").replace("'", "").lower()
     date_str = datetime.now().strftime("%Y%m%d")
     nom_pdf = f"rapport_instep_{nom_fichier_base}_{date_str}.pdf"
+
+    pose_path = "graphes/pose_impact.png"
 
     if st.button("📥 Télécharger le rapport PDF", use_container_width=True):
         rapport_path = generer_rapport_pdf(
@@ -417,19 +448,21 @@ def analyse_biomeca_instep():
             recommandations=recommandations,
             reco_globale=synthese_globale,
             image_path=pose_path,
-            graphe1=graph1,
-            graphe2=graph2,
+            graphe1="graphes/graphe_vitesse_lineaire.png",
+            graphe2="graphes/graphe_vitesse_angulaire.png",
             nom_fichier=nom_pdf,
             nom_joueuse=nom_joueuse,
             type_geste=label_type_geste
         )
         with open(rapport_path, "rb") as f:
-            st.download_button("📤 Télécharger le rapport généré", f, file_name=nom_pdf)
-    # Définir les chemins en sortie pour stockage DB
+            st.download_button(label="📤 Télécharger le rapport généré", data=f, file_name=nom_pdf, use_container_width=True)
+
     chemin_rapport = f"rapports/{nom_pdf}"
     chemin_video = video_out_path if os.path.exists(video_out_path) else None
 
     return score_global, chemin_rapport, chemin_video
+
+
 
 def analyse_biomeca_passe():
     import os
@@ -462,7 +495,6 @@ def analyse_biomeca_passe():
         generer_recommandation_globale_passkick
     )
 
-    st.markdown("<h2 style='text-align:center;'>📊 Étape 7 : Analyse biomécanique – Passe intérieure</h2>", unsafe_allow_html=True)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
         tmp.write(st.session_state.video_bytes.getbuffer())

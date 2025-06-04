@@ -5,40 +5,96 @@ import numpy as np
 # 1. Calcul d’angles à partir des keypoints 2D
 # --------------------------------------------------
 
+import numpy as np
+
 def calculate_angle_2d(a, b, c):
+    """
+    Calcule l'angle formé par trois points 2D (x, y) avec b comme sommet.
+    Angle retourné en degrés.
+    """
     a, b, c = np.array(a), np.array(b), np.array(c)
     ba = a - b
     bc = c - b
-    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
-    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+
+    norm_ba = np.linalg.norm(ba)
+    norm_bc = np.linalg.norm(bc)
+
+    # Vérification pour éviter division par zéro
+    if norm_ba < 1e-6 or norm_bc < 1e-6:
+        return 0.0
+
+    cosine_angle = np.dot(ba, bc) / (norm_ba * norm_bc)
+    cosine_angle = np.clip(cosine_angle, -1.0, 1.0)  # ⛔ éviter erreurs d'arrondi
+    angle = np.arccos(cosine_angle)
+
     return np.degrees(angle)
 
-def get_joint_angles(keypoints):
-    angles = {}
+import numpy as np
+
+def calculate_angle_3d(a, b, c):
+    a, b, c = np.array(a), np.array(b), np.array(c)
+    ba = a - b
+    bc = c - b
+    norm_ba = np.linalg.norm(ba)
+    norm_bc = np.linalg.norm(bc)
+
+    if norm_ba < 1e-6 or norm_bc < 1e-6:
+        return 0.0
+
+    cosine_angle = np.dot(ba, bc) / (norm_ba * norm_bc)
+    cosine_angle = np.clip(cosine_angle, -1.0, 1.0)
+    angle = np.arccos(cosine_angle)
+
+    return np.degrees(angle)
+
+def get_joint_angles(frame):
+    """
+    Calcule les angles genou, cheville, hanche, épaule pour une frame de keypoints 3D.
+    """
     try:
-        # Genoux
-        angles['genou_droit'] = calculate_angle_2d(keypoints[8], keypoints[9], keypoints[10])
-        angles['genou_gauche'] = calculate_angle_2d(keypoints[11], keypoints[12], keypoints[13])
-        # Hanches
-        angles['hanche_droit'] = calculate_angle_2d(keypoints[1], keypoints[8], keypoints[9])
-        angles['hanche_gauche'] = calculate_angle_2d(keypoints[1], keypoints[11], keypoints[12])
-        # Chevilles
-        angles['cheville_droit'] = calculate_angle_2d(keypoints[9], keypoints[10], keypoints[22])
-        angles['cheville_gauche'] = calculate_angle_2d(keypoints[12], keypoints[13], keypoints[19])
-        # Coudes
-        angles['coude_droit'] = calculate_angle_2d(keypoints[2], keypoints[3], keypoints[4])
-        angles['coude_gauche'] = calculate_angle_2d(keypoints[5], keypoints[6], keypoints[7])
-        # Épaules
-        angles['epaule_droit'] = calculate_angle_2d(keypoints[1], keypoints[2], keypoints[3])
-        angles['epaule_gauche'] = calculate_angle_2d(keypoints[1], keypoints[5], keypoints[6])
+        epaule_droite = frame[11]
+        coude_droit = frame[13]
+        poignet_droit = frame[15]
+
+        epaule_gauche = frame[12]
+        coude_gauche = frame[14]
+        poignet_gauche = frame[16]
+
+        hanche_droite = frame[23]
+        genou_droit = frame[25]
+        cheville_droite = frame[27]
+        pied_droit = frame[31] if len(frame) > 31 else cheville_droite
+
+        hanche_gauche = frame[24]
+        genou_gauche = frame[26]
+        cheville_gauche = frame[28]
+        pied_gauche = frame[32] if len(frame) > 32 else cheville_gauche
+
+        # Angles jambes
+        angle_genou_droit = calculate_angle_3d(hanche_droite, genou_droit, cheville_droite)
+        angle_cheville_droit = calculate_angle_3d(genou_droit, cheville_droite, pied_droit)
+        angle_hanche_droit = calculate_angle_3d(epaule_droite, hanche_droite, genou_droit)
+
+        angle_genou_gauche = calculate_angle_3d(hanche_gauche, genou_gauche, cheville_gauche)
+        angle_cheville_gauche = calculate_angle_3d(genou_gauche, cheville_gauche, pied_gauche)
+        angle_hanche_gauche = calculate_angle_3d(epaule_gauche, hanche_gauche, genou_gauche)
+
+        # Angles bras
+        angle_epaule_droite = calculate_angle_3d(coude_droit, epaule_droite, hanche_droite)
+        angle_epaule_gauche = calculate_angle_3d(coude_gauche, epaule_gauche, hanche_gauche)
+
+        return {
+            'genou_droit': round(angle_genou_droit, 1),
+            'cheville_droit': round(angle_cheville_droit, 1),
+            'hanche_droit': round(angle_hanche_droit, 1),
+            'genou_gauche': round(angle_genou_gauche, 1),
+            'cheville_gauche': round(angle_cheville_gauche, 1),
+            'hanche_gauche': round(angle_hanche_gauche, 1),
+            'epaule_droite': round(angle_epaule_droite, 1),
+            'epaule_gauche': round(angle_epaule_gauche, 1)
+        }
     except Exception as e:
-        print("Erreur de calcul des angles :", e)
-        angles = {k: None for k in [
-            'genou_droit', 'genou_gauche', 'hanche_droit', 'hanche_gauche',
-            'cheville_droit', 'cheville_gauche', 'coude_droit', 'coude_gauche',
-            'epaule_droit', 'epaule_gauche'
-        ]}
-    return angles
+        return {}
 
 # --------------------------------------------------
 # 2. Valeurs de référence biomécaniques (instep)

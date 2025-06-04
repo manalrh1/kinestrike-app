@@ -12,17 +12,22 @@ from analyse import analyse_biomeca_inside
 from data_storage import enregistrer_analyse
 from ui_utils import afficher_sidebar_profil
 
-# ✅ Initialiser l'étape AVANT toute utilisation de session_state
 if "etape" not in st.session_state:
-    st.session_state.etape = 0
+    st.session_state.etape = 0  # Accueil par défaut
 
-# ⚙️ Configurer la page après avoir sécurisé les états
+# ⚙️ Configurer la page Streamlit
 st.set_page_config(page_title="KinéStrike", page_icon="⚽", layout="wide")
 
-# ✅ Afficher la sidebar sauf à l'étape 0 (accueil)
-if st.session_state.etape != 0:
+# ✅ Protection connexion : protéger SEULEMENT les étapes >= 2
+if st.session_state.get("etape", 0) not in [0, 1] and "name" not in st.session_state:
+    st.session_state.etape = 1  # Connexion
+    st.rerun()
+
+# ✅ Afficher la sidebar uniquement si connecté
+if st.session_state.etape != 0 and st.session_state.get("name"):
     from ui_utils import afficher_sidebar_profil
     afficher_sidebar_profil()
+
 # --------------------
 # ÉTAPE 0 : Accueil
 # --------------------
@@ -86,7 +91,6 @@ if st.session_state.etape == 0:
         if st.button("🚀 Démarrer l’analyse", use_container_width=True):
             st.session_state.etape = 1
             st.rerun()
-
 
 # --------------------
 # ÉTAPE 1 : Connexion
@@ -232,7 +236,6 @@ elif st.session_state.etape == 2:
             st.warning("Aucune joueuse avec analyse dans cette catégorie.")
     else:
         st.info("👉 Sélectionnez une catégorie dans la barre latérale.")
-
 
 # --------------------
 # ÉTAPE 2.5 : Instructions qualité vidéo

@@ -7,4 +7,3 @@ plotly
 opencv-python-headless
 reportlab
 python-pptx
-moviepy==1.0.3

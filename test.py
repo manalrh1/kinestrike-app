@@ -1,27 +1,19 @@
-from graphviz import Digraph
+from extraction import extraire_keypoints_3d_plotly
+from visualisation import generer_animation_plotly
+from biomeca import get_joint_angles  # ⚡ important pour calculer les angles !
 
-# Création du diagramme UML simplifié
-dot = Digraph('Architecture Technique du Système')
+# === 1. Chemin vers ta vidéo ===
+video_path = "video_segmentee.mp4"  # change ce chemin selon ta vidéo réelle
 
-# Modules principaux
-dot.node('A', 'app.py\nInterface utilisateur (Streamlit)')
-dot.node('B', 'analyse.py\nCoordination des analyses')
-dot.node('C', 'biomeca.py\nAngles articulaires, alignement')
-dot.node('D', 'vitesses.py\nVitesses linéaires et angulaires')
-dot.node('E', 'segmentation_evenementielle.py\nDécoupage des phases')
-dot.node('F', 'extraction.py\nExtraction des données biomécaniques')
-dot.node('G', 'visualisation.py\nVidéo, graphiques, image')
-dot.node('H', 'rapport.py\nRapport PDF')
-dot.node('I', 'notation_*.py\nNotation par type de geste')
-dot.node('J', 'recommandations_*.py\nGénération de recommandations')
-dot.node('K', 'detect_ball_yolo.py\nDétection du ballon')
-dot.node('L', 'parametres_spatiaux.py\nAngle d’approche, pied d’appui')
+# === 2. Extraction des keypoints 3D
+keypoints_3d = extraire_keypoints_3d_plotly(video_path)
 
-# Relations
-dot.edges([('A', 'B'), ('B', 'F'), ('B', 'C'), ('B', 'D'), ('B', 'E'),
-           ('B', 'I'), ('B', 'J'), ('B', 'G'), ('B', 'H'), ('F', 'K'),
-           ('B', 'L')])
+# === 3. Calcul des angles pour chaque frame
+angles_par_frame = []
+for frame in keypoints_3d:
+    angles = get_joint_angles(frame)  # ✅ calcul des angles genou, hanche, cheville
+    angles_par_frame.append(angles)
 
-# Affichage
-dot.render('/mnt/data/uml_architecture_technique', format='png', cleanup=False)
-'/mnt/data/uml_architecture_technique.png'
+# === 4. Génération de l’animation interactive
+fig = generer_animation_plotly(keypoints_3d, angles_par_frame)
+fig.show()

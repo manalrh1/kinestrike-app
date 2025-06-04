@@ -7,7 +7,7 @@ def afficher_sidebar_profil():
     st.markdown("""
         <style>
             section[data-testid="stSidebar"] {
-                background-color: #ffe5e5;  /* Rouge très clair */
+                background-color: #ffe5e5;
                 padding: 1rem;
             }
             .stButton>button {
@@ -40,6 +40,13 @@ def afficher_sidebar_profil():
                 st.rerun()
 
         st.markdown("---")
-        if st.button("🔓 Se déconnecter", key="btn_logout"):
-            st.session_state.clear()
+
+        # ✅ BOUTON DECONNEXION PROPRE
+        if st.button("🔓 Se déconnecter"):
+            # Ne pas clear() ! Supprimer seulement les variables d'utilisateur
+            for key in ['name', 'username', 'categories_autorisees', 'categorie_selectionnee', 'joueuse_id']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            # Mettre l'étape 1 (page login)
+            st.session_state.etape = 1
             st.rerun()

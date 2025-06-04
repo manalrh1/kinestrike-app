@@ -206,28 +206,54 @@ def generer_analyse_qualitative(notes_par_phase):
 
     descriptions = {
         "approche": {
-            "fort": "La joueuse a réalisé une approche maîtrisée, avec un bon placement du pied d’appui et un angle d’approche efficace.",
-            "faible": "L’approche montre des faiblesses : l’angle d’approche ou le placement du pied d’appui sont à revoir pour garantir une meilleure posture de frappe."
+            "fort": (
+                "La trajectoire d’approche est optimale : l'angle choisi facilite l'ouverture du bassin, "
+                "et le pied d’appui est positionné de manière stable, garantissant un élan fluide et équilibré vers le ballon."
+            ),
+            "faible": (
+                "La trajectoire d’approche présente des défauts : l'angle d'attaque est inadapté, réduisant la capacité "
+                "de rotation du bassin, et le positionnement du pied d’appui ne permet pas un bon équilibre avant la frappe."
+            )
         },
         "kick_step": {
-            "fort": "La coordination cuisse-jambe-pied est fluide, et la vitesse du pied progresse efficacement jusqu’à l’impact.",
-            "faible": "Des défaillances dans la coordination ou une progression de vitesse non conforme nuisent à l’efficacité de la phase de transfert."
+            "fort": (
+                "La phase de kick step est bien maîtrisée : la coordination entre la cuisse, la jambe et le pied est progressive, "
+                "permettant une montée efficace de la vitesse jusqu’au moment de l’impact."
+            ),
+            "faible": (
+                "La phase de kick step révèle un manque de coordination : le transfert d'énergie entre la cuisse, la jambe "
+                "et le pied est interrompu, ce qui limite la montée en puissance avant l’impact."
+            )
         },
         "impact": {
-            "fort": "Le moment d’impact est bien synchronisé avec le pic de vitesse et la cheville semble bien verrouillée.",
-            "faible": "Le timing d’impact ou le verrouillage de la cheville sont imprécis, réduisant la puissance ou la précision de la frappe."
+            "fort": (
+                "Le moment d'impact est techniquement réussi : la synchronisation du pic de vitesse avec le contact ballon-pied "
+                "est efficace, et la cheville est verrouillée, maximisant la transmission de force."
+            ),
+            "faible": (
+                "L’impact est mal maîtrisé : la synchronisation du pic de vitesse est décalée par rapport au contact, "
+                "et l'absence de verrouillage de la cheville réduit la puissance et la précision de la frappe."
+            )
         },
         "suivi": {
-            "fort": "Le mouvement de suivi est fluide, avec un bon ralentissement des segments et un alignement postural tronc-bassin adéquat.",
-            "faible": "Le suivi manque de fluidité ou l’alignement du tronc est incomplet, ce qui diminue la stabilité post-frappe."
+            "fort": (
+                "Le suivi post-frappe est fluide : la jambe ralentit progressivement après l'impact et l'alignement "
+                "tronc-bassin est bien conservé, assurant stabilité et équilibre en fin de geste."
+            ),
+            "faible": (
+                "Le suivi post-frappe manque de fluidité : l'arrêt brutal du geste nuit à l’équilibre, et l’alignement "
+                "tronc-bassin n’est pas correctement restauré après la frappe."
+            )
         }
     }
 
     for phase, note in notes_par_phase.items():
         if phase in descriptions:
             if note >= 8:
-                points_forts.append(f"Point fort : {descriptions[phase]['fort']}")
-            elif note < 7:
-                points_a_ameliorer.append(f"À améliorer : {descriptions[phase]['faible']}")
+                commentaire = descriptions[phase]["fort"]
+                points_forts.append(f"🟢 {phase.capitalize()} : {commentaire}")
+            elif note < 8:
+                commentaire = descriptions[phase]["faible"]
+                points_a_ameliorer.append(f"🔴 {phase.capitalize()} : {commentaire}")
 
     return points_forts, points_a_ameliorer
