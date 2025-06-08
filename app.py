@@ -1065,10 +1065,11 @@ elif st.session_state.etape == 7:
     date_str = datetime.now().strftime("%Y%m%d")
     nom_pdf = f"rapport_{label_type_geste.lower()}_{nom_fichier_base}_{date_str}.pdf"
 
-    radar_path = "/mnt/data/radar_notes.png"
-    graphe1 = "/mnt/data/graphe_vraie_sequence_proximale_distale_avec_labels.png"
-    graphe2 = "/mnt/data/graphe_vitesses_angulaires_jambe_pic_1_9s.png"
-    image_path = "/mnt/data/impact_pose.png"  # Si tu as une image annotée
+    radar_path = "radar_notes.png"
+    graphe1 = "graphe_vraie_sequence_proximale_distale_avec_labels.png"
+    graphe2 = "graphe_vitesses_angulaires_jambe_pic_1_9s.png"
+    image_path = "impact_pose.png"
+
 
     rapport_genere = False
     rapport_pdf_path = None
