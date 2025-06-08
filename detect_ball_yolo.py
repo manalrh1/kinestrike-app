@@ -6,6 +6,7 @@ from tempfile import gettempdir
 from ultralytics import YOLO
 
 def detect_ball_yolo(video_path, output_path=None, conf=0.4):
+    from ultralytics import YOLO
     """
     Utilise YOLOv8s pour détecter la position du ballon dans chaque frame d'une vidéo.
     Sauvegarde les positions dans un fichier .pkl.
