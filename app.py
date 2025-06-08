@@ -636,6 +636,7 @@ elif st.session_state.etape == 5:
 elif st.session_state.etape == 6:
     import tempfile
     import os
+    from detect_ball_yolo import detect_ball_yolo
 
     # 🔙 Bouton flèche en haut à gauche
     col_retour, _ = st.columns([1, 6])
@@ -645,7 +646,7 @@ elif st.session_state.etape == 6:
             st.rerun()
 
     # 🎯 Titre centré
-    st.markdown("<h2 style='text-align:center;'>🎯 Détection automatique du ballon</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>🎯 Étape 6 : Détection automatique du ballon</h2>", unsafe_allow_html=True)
     st.markdown("L’intelligence artificielle repère le ballon sur chaque image pour mesurer avec précision les distances et vitesses.")
 
     if "video_bytes" not in st.session_state:
@@ -674,7 +675,8 @@ elif st.session_state.etape == 6:
         if st.button("➡️ Passer à l’analyse du geste", use_container_width=True):
             st.session_state.etape = 7
             st.rerun()
-    
+
+
 # -------------------------------
 # ÉTAPE 7 : Analyse biomécanique complète
 # -------------------------------
