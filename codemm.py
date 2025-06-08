@@ -58,7 +58,7 @@ def generer_graphiques_vraie_sequence_proximale_distale_avec_phases_labels():
 
 # Générer et afficher le graphe
 fig = generer_graphiques_vraie_sequence_proximale_distale_avec_phases_labels()
-fig.savefig("/mnt/data/graphe_points_proximale_distale.png")
+fig.savefig("graphe_points_proximale_distale.png")
 plt.show()
 
 
@@ -139,7 +139,7 @@ def generer_vitesses_angulaires_jambe_pic_1_9s():
 
 # Générer et afficher
 fig_jambe_1_9s = generer_vitesses_angulaires_jambe_pic_1_9s()
-fig_jambe_1_9s.savefig("/mnt/data/graphe_vitesses_angulaires_jambe_pic_1_9s.png")
+fig_jambe_1_9s.savefig("graphe_vitesses_angulaires_jambe_pic_1_9s.png")
 fig_jambe_1_9s.show()
 
 import matplotlib.pyplot as plt
