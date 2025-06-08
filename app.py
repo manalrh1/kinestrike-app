@@ -27,6 +27,7 @@ from data_storage import (
 )
 from datetime import datetime
 import streamlit as st
+from detect_ball_yolo import detect_ball_yolo
 
 if "etape" not in st.session_state:
     st.session_state.etape = 0  # Accueil par défaut
@@ -635,7 +636,6 @@ elif st.session_state.etape == 5:
 elif st.session_state.etape == 6:
     import tempfile
     import os
-    from detect_ball_yolo import detect_ball_yolo
 
     # 🔙 Bouton flèche en haut à gauche
     col_retour, _ = st.columns([1, 6])
