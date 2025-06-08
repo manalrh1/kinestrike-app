@@ -11,22 +11,6 @@ from analyse import analyse_biomeca_instep
 from analyse import analyse_biomeca_inside
 from data_storage import enregistrer_analyse
 from ui_utils import afficher_sidebar_profil
-import os
-from datetime import datetime
-
-from visualisation import enregistrer_image_pose, generer_video_annotee
-from rapport import generer_rapport_pdf
-
-import matplotlib.pyplot as plt
-from codemm import generer_graphiques_vraie_sequence_proximale_distale_avec_phases_labels, generer_vitesses_angulaires_jambe_pic_1_9s, generer_radar_notes
-from data_storage import (
-    ajouter_joueuse,
-    get_joueuses_par_coach,
-    enregistrer_analyse,
-    existe_analyse
-)
-from datetime import datetime
-import streamlit as st
 
 if "etape" not in st.session_state:
     st.session_state.etape = 0  # Accueil par défaut
@@ -428,7 +412,7 @@ elif st.session_state.etape == 4:
             st.rerun()
 
     # 🎯 Titre
-    st.markdown("<h2 style='text-align:center;'>🧭 Définir les moments clés du geste</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>🧭 Étape 4 : Définir les moments clés du geste</h2>", unsafe_allow_html=True)
 
     if "video_bytes" not in st.session_state:
         st.error("❌ Aucune vidéo. Retournez à l'étape précédente.")
@@ -452,8 +436,8 @@ elif st.session_state.etape == 4:
         st.info("""
         👉 Veuillez cliquer sur **3 images** correspondant aux **moments clés** suivants du geste :
 
-        1. 🦶 **Début du geste** : quand la jambe d'appui touche le sol  
-        2. 💥 **Impact** : lorsque le pied frappe touche le ballon  
+        1. 🦶 **Début du geste** : quand la jambe commence à se balancer pour frapper  
+        2. 💥 **Impact** : lorsque le pied frappe le ballon  
         3. 🌀 **Suivi** : juste après l’impact, quand la jambe continue son mouvement
 
         ⛔️ Choisissez les images qui vous semblent les plus proches de ces instants.
@@ -570,7 +554,7 @@ elif st.session_state.etape == 5:
             st.rerun()
 
     # 🎯 Titre
-    st.markdown("<h2 style='text-align:center;'> Vérification des phases segmentées</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>🧪 Étape 5 : Vérification des phases segmentées</h2>", unsafe_allow_html=True)
     st.markdown("La vidéo ci-dessous affiche les phases détectées automatiquement à partir des moments clés que vous avez sélectionnés.")
 
     if "video_bytes" not in st.session_state:
@@ -645,7 +629,7 @@ elif st.session_state.etape == 6:
             st.rerun()
 
     # 🎯 Titre centré
-    st.markdown("<h2 style='text-align:center;'>🎯 Détection automatique du ballon</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>🎯 Étape 6 : Détection automatique du ballon</h2>", unsafe_allow_html=True)
     st.markdown("L’intelligence artificielle repère le ballon sur chaque image pour mesurer avec précision les distances et vitesses.")
 
     if "video_bytes" not in st.session_state:
@@ -674,12 +658,23 @@ elif st.session_state.etape == 6:
         if st.button("➡️ Passer à l’analyse du geste", use_container_width=True):
             st.session_state.etape = 7
             st.rerun()
-    
+
+
 # -------------------------------
 # ÉTAPE 7 : Analyse biomécanique complète
 # -------------------------------
 elif st.session_state.etape == 7:
-    
+    from analyse import (
+        analyse_biomeca_instep,
+        analyse_biomeca_inside,
+        analyse_biomeca_passe
+    )
+    from data_storage import (
+        ajouter_joueuse,
+        get_joueuses_par_coach,
+        enregistrer_analyse,
+        existe_analyse
+    )
     from datetime import datetime
     # 🔙 Bouton flèche retour en haut à gauche
     col_retour, _ = st.columns([1, 6])
@@ -689,473 +684,62 @@ elif st.session_state.etape == 7:
             st.rerun()
 
     # 🎯 Titre d’étape
-    st.markdown("<h2 style='text-align:center;'> Analyse biomécanique du geste</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>🧪 Étape 7 : Analyse biomécanique du geste</h2>", unsafe_allow_html=True)
 
     type_geste = st.session_state.type_geste.lower()
 
-
-    import os
-    import cv2
-    from datetime import datetime
-    from extraction import extraire_donnees_biomecaniques
-    from segmentation_evenementielle import segmenter_kick
-    from visualisation import generer_video_annotee
-
-    # --- 1. Préparation des variables ---
-    import tempfile
-    import os
-
-    # On récupère la vidéo uploadée par l'utilisateur sous forme de bytes
-    if "video_bytes" in st.session_state and st.session_state["video_bytes"] is not None:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-            tmp.write(st.session_state["video_bytes"].getbuffer())
-            video_path = tmp.name
+    # 1. Lancer l’analyse technique
+    if "cou-de-pied" in type_geste:
+        score_global, rapport_pdf_path, video_annotee_path = analyse_biomeca_instep()
+    elif "intérieur" in type_geste and "passe" not in type_geste:
+        score_global, rapport_pdf_path, video_annotee_path = analyse_biomeca_inside()
+    elif "passe" in type_geste:
+        score_global, rapport_pdf_path, video_annotee_path = analyse_biomeca_passe()
     else:
-        st.error("❌ Aucune vidéo n’a été chargée par l’utilisateur. Retour à l’étape précédente.")
-        st.stop()
-    ball_positions_path = st.session_state.get("ball_position_path", None)
-    pied_frappe = st.session_state.get("pied_frappe", "droit").lower()
-
-    frame_kick = st.session_state.get("frame_kick")
-    frame_impact = st.session_state.get("frame_impact")
-    frame_post = st.session_state.get("frame_postimpact")
-
-    # Vérifie que tous les moments clés sont bien définis
-    if None in [frame_kick, frame_impact, frame_post]:
-        st.error("❌ Moments clés du tir non définis.")
+        st.error("❌ Type de geste non reconnu.")
         st.stop()
 
-    # Nombre total de frames
-    cap = cv2.VideoCapture(video_path)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.release()
+    # 2. Ajouter la joueuse si ajoutée via formulaire
+    if "new_joueuse_data" in st.session_state:
+        nom = st.session_state.new_joueuse_data["nom"]
+        prenom = st.session_state.new_joueuse_data["prenom"]
+        categorie = st.session_state.new_joueuse_data["categorie"]
 
-    # --- 2. Génère les phases (liste pour chaque frame) ---
-    phases = segmenter_kick(
-        frames_total=total_frames,
-        frame_kick=frame_kick,
-        frame_impact=frame_impact,
-        frame_recontact=frame_post
-    )
-    st.session_state["phases"] = phases
-
-    # --- 3. Extraction des keypoints si absent ---
-    if "keypoints_all" not in st.session_state or st.session_state["keypoints_all"] is None:
-        donnees = extraire_donnees_biomecaniques(
-            video_path=video_path,
-            ball_positions_path=ball_positions_path,
-            pied_frappe=pied_frappe
+        deja = any(
+            j[1] == nom and j[2] == prenom and j[3] == categorie
+            for j in get_joueuses_par_coach(st.session_state["username"])
         )
-        st.session_state["keypoints_all"] = donnees.get("keypoints_all", None)
 
-    keypoints_all = st.session_state.get("keypoints_all", None)
+        if not deja:
+            ajouter_joueuse(nom, prenom, categorie, st.session_state["username"])
 
-    # --- 4. Vérifie la cohérence des entrées ---
-    if (
-        keypoints_all is None
-        or phases is None
-        or not isinstance(phases, list)
-        or len(phases) != total_frames
-        or len(keypoints_all) != total_frames
-    ):
-        st.error(
-            f"""Données invalides pour la génération de la vidéo annotée :
-            - keypoints_all: {None if keypoints_all is None else len(keypoints_all)}
-            - phases: {None if phases is None else len(phases)}
-            - total_frames: {total_frames}
-            Vérifie la cohérence du nombre de frames extraites et segmentées.
-            """
-        )
+        joueuses = get_joueuses_par_coach(st.session_state["username"])
+        joueuse = next((j for j in joueuses if j[1] == nom and j[2] == prenom and j[3] == categorie), None)
+
+        if joueuse:
+            st.session_state.joueuse_id = joueuse[0]
+            st.session_state.joueuse_selectionnee = f"{prenom} {nom}"
+            st.session_state.categorie_joueuse = categorie
+
+        del st.session_state["new_joueuse_data"]
+
+    # 3. Enregistrer l’analyse si elle n’existe pas déjà
+    joueuse_id = st.session_state.get("joueuse_id")
+    date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if not joueuse_id:
+        st.error("❌ Joueuse introuvable. Analyse non enregistrée.")
         st.stop()
-    print("video_path", video_path)
-    print("keypoints_all", type(keypoints_all), len(keypoints_all) if keypoints_all else 0)
-    print("phases", type(phases), len(phases) if phases else 0)
 
-
-    if "keypoints_all" not in st.session_state or st.session_state["keypoints_all"] is None:
-        donnees = extraire_donnees_biomecaniques(
-            video_path=video_path,
-            ball_positions_path=ball_positions_path,
-            pied_frappe=pied_frappe
-        )
-        keypoints_tmp = donnees.get("keypoints_all", None)
-        st.session_state["keypoints_all"] = keypoints_tmp
-
-        print("Extraction keypoints sur vidéo :", video_path)
-        print("Nombre de keypoints_all extraits :", 0 if keypoints_tmp is None else len(keypoints_tmp))
-        if keypoints_tmp is not None and len(keypoints_tmp) == 0:
-            st.error("Extraction des keypoints impossible : la vidéo n’a pas été lue correctement ou la détection n’a pas fonctionné.")
-            st.stop()
-
-    # --- 5. Génération de la vidéo annotée ---
-    video_out_path = generer_video_annotee(
-        video_path=video_path,
-        keypoints_all=keypoints_all,
-        phases=phases,
-        pied_frappe=pied_frappe,
-        output_path="video_squelette.mp4",
-        ralenti=3
-    )
-
-    # --- 6. Affichage et téléchargement de la vidéo ---
-    if video_out_path and os.path.exists(video_out_path):
-        col1, col2, col3 = st.columns([3, 2, 3])
-        with col2:
-            with open(video_out_path, "rb") as f:
-                video_bytes = f.read()
-            st.video(video_bytes, format="video/mp4")
-            st.download_button(
-                "⬇️ Télécharger la vidéo annotée",
-                data=video_bytes,
-                file_name=os.path.basename(video_out_path),
-                use_container_width=True
-            )
-    else:
-        st.info("Vidéo annotée non disponible.")
-
-    from visualisation import generer_animation_plotly
-
-    # --- Animation 3D du squelette avec angles articulaires ---
-    # On récupère les données nécessaires
-    keypoints_3d = st.session_state.get("keypoints_3d", None)
-    angles_par_frame = st.session_state.get("angles_all", None)  # Ou adapte selon ta variable
-    phases = st.session_state.get("phases", None)
-
-    if keypoints_3d is None or angles_par_frame is None:
-        # Si tu n'as pas déjà extrait les keypoints_3d et angles_all, fais-le ici :
-        from extraction import extraire_donnees_biomecaniques
-        ball_positions_path = st.session_state.get("ball_position_path", None)
-        pied_frappe = st.session_state.get("pied_frappe", "droit").lower()
-        donnees = extraire_donnees_biomecaniques(
-            video_path=video_path,
-            ball_positions_path=ball_positions_path,
-            pied_frappe=pied_frappe
-        )
-        keypoints_3d = donnees.get("keypoints_3d", None)
-        angles_par_frame = donnees.get("angles_all", None)
-        st.session_state["keypoints_3d"] = keypoints_3d
-        st.session_state["angles_all"] = angles_par_frame
-
-    if keypoints_3d is not None and angles_par_frame is not None:
-        st.subheader("🧍‍♂️ Animation 3D du squelette avec angles articulaires")
-        fig3d = generer_animation_plotly(keypoints_3d, angles_par_frame, phases)
-        st.plotly_chart(fig3d, use_container_width=True)
-
-    # 3. Synthèse résultats (données fictives ici à adapter à tes propres sorties)
-    score_global = 6.2
-    notes_par_phase = {
-        "approche": 5.5,
-        "pas de frappe": 6.0,
-        "impact": 5.0,
-        "suivi": 6.5
-    }
-    points_forts = [
-        {
-            "titre": "Bonne position du pied d'appui",
-            "explication": (
-                "Le pied d’appui est placé à côté du ballon, à une distance optimale (environ 5 à 10 cm), "
-                "ce qui garantit une bonne stabilité du corps et une orientation correcte avant la frappe. "
-                "Cette position favorise un transfert d'énergie efficace vers la jambe de frappe et améliore la précision ainsi que la puissance du tir."
-            )
-        },
-        {
-            "titre": "Phase de suivi du mouvement fluide et contrôlée",
-            "explication": (
-                "Après l’impact, la phase de suivi (follow-through) est bien réalisée : la jambe de frappe poursuit sa trajectoire de façon naturelle, "
-                "le tronc et le bassin se réalignent progressivement, et l’équilibre global du corps est conservé. "
-                "Ce relâchement contrôlé permet une dissipation progressive de l’énergie, prévient les blessures et témoigne d’une coordination segmentaire efficace. "
-                "Un suivi de mouvement maîtrisé est le signe d’une technique mature et favorise une récupération rapide après le tir."
-            )
-        }
-    ]
-    recommandations = [
-        (
-            "Approche",
-            "Angle d’approche trop fermé (<30°)",
-            (
-                "❌ La joueuse attaque le ballon quasiment dans l’axe, ce qui limite la capacité à générer un effet fouetté et réduit la puissance de frappe.\n"
-                "🎯 Objectif : Ouvrir davantage l’angle d’approche (idéalement entre 35° et 45°) afin de favoriser la rotation du bassin et permettre une meilleure préparation du geste.\n"
-                "🏋️‍♀️ Exercice : Mise en place de plots pour forcer l’approche en diagonale, répétition de courses d’élan avec contrôle vidéo ou feedback de l’angle réalisé."
-            )
-        ),
-        (
-            "Frappe",
-            "Coordination segmentaire insuffisante",
-            (
-                "❌ L’enchaînement entre le mouvement de la cuisse et de la jambe est mal synchronisé, ce qui nuit à la progression de la vitesse et à la transmission optimale de l’énergie au pied.\n"
-                "🎯 Objectif : Améliorer la séquence proximale-distale (d’abord cuisse puis extension rapide de la jambe) pour produire un effet de fouet efficace.\n"
-                "🏋️‍♀️ Exercice : Frappe ralentie avec analyse vidéo, focalisation sur le timing entre la cuisse et la jambe, travail au métronome ou avec arrêt sur image pour corriger la séquence."
-            )
-        ),
-        (
-            "Impact",
-            "Impact mal synchronisé",
-            (
-                "❌ Le pic de vitesse du pied est atteint avant le contact avec le ballon, ce qui diminue le transfert d’énergie et l’efficacité du tir.\n"
-                "🎯 Objectif : Synchroniser la vitesse maximale du pied avec le moment précis de l’impact afin de maximiser la puissance transmise au ballon.\n"
-                "🏋️‍♀️ Exercice : Frappe sur ballon suspendu, déclenchement du geste sur signal sonore ou lumineux, feedback immédiat pour ajuster le timing et la coordination."
-            )
-        )
-    ]
-
-    points_a_ameliorer = [
-        {
-            "titre": "Angle d'approche insuffisant (<30°)",
-            "explication": (
-                "L’angle d’approche est trop faible (inférieur à 30°), ce qui limite la capacité à aligner correctement le corps par rapport au ballon "
-                "et à générer une vitesse optimale du pied de frappe. Cette position de départ réduit la puissance et la précision du tir, "
-                "et peut gêner la réalisation d’un effet fouetté efficace."
-            )
-        },
-        {
-            "titre": "Amplitudes articulaires insuffisantes",
-            "explication": (
-                "Les amplitudes de mouvement observées au niveau des principales articulations (hanche, genou, cheville, tronc) "
-                "sont inférieures aux valeurs attendues pour un tir optimal. "
-                "Un manque de flexion ou d’extension dans ces segments limite l’accumulation et le transfert d’énergie pendant la frappe, "
-                "ce qui réduit la vitesse et l’efficacité du geste."
-            )
-        },
-        {
-            "titre": "Pic de vitesse mal synchronisé avec l'impact",
-            "explication": (
-                "La vitesse maximale du pied de frappe n’est pas atteinte exactement au moment de l’impact avec le ballon. "
-                "Ce défaut de synchronisation diminue le transfert d’énergie vers le ballon, "
-                "ce qui réduit la puissance, la vitesse et la qualité globale du tir."
-            )
-        }
-    ]
-
-
-    # 4. Synthèse globale
-    RECOMMANDATIONS_GLOBALES = {
-        "<5": (
-            "❌ Insuffisant",
-            "Le geste est globalement mal structuré, avec un enchaînement peu fluide des phases, un manque de coordination cuisse-jambe-pied, et souvent un mauvais timing de l’impact. L’efficacité biomécanique est compromise, ce qui peut entraîner une perte de puissance, de contrôle ou un risque de blessure. Il est essentiel de retravailler les bases techniques avec un encadrement rigoureux."
-        ),
-        "5-6.9": (
-            "⚠️ À corriger",
-            "Le tir présente des axes d’amélioration notables. La réalisation technique reste partiellement fonctionnelle mais nécessite un travail complémentaire pour atteindre un niveau optimal. Un entraînement ciblé, axé sur la régularité et la maîtrise du geste, permettra de progresser vers une exécution plus efficace et plus stable."
-        ),
-        "7-8.9": (
-            "✅ Correct",
-            "Le tir est globalement bien réalisé, avec une structure technique cohérente. Quelques désajustements mineurs peuvent subsister, mais le geste reste fonctionnel et efficace dans la majorité des cas. Un travail ciblé sur certaines phases permettra de progresser rapidement."
-        ),
-        "9-10": (
-            "⭐ Excellent",
-            "Le geste est exécuté avec une grande fluidité et une très bonne coordination segmentaire. La technique est conforme aux standards du modèle élite, avec un bon enchaînement des phases, un timing optimal de l’impact, un bon verrouillage articulaire, et un mouvement de suivi bien maîtrisé. Très peu de corrections sont nécessaires, l’athlète peut viser la performance maximale."
-        )
-    }
-    def generer_recommandation_globale(note_finale):
-        note_finale = float(note_finale)
-        if note_finale < 5:
-            return RECOMMANDATIONS_GLOBALES["<5"]
-        elif 5 <= note_finale < 7:
-            return RECOMMANDATIONS_GLOBALES["5-6.9"]
-        elif 7 <= note_finale < 9:
-            return RECOMMANDATIONS_GLOBALES["7-8.9"]
-        else:
-            return RECOMMANDATIONS_GLOBALES["9-10"]
-
-    titre_global, synthese_globale = generer_recommandation_globale(score_global)
-
-    # Note globale (même style)
-    st.markdown("### Note globale")
-    st.write(f"- **Note globale** : {score_global:.2f} / 10")
-
-    # 5. Affichage synthèse globale
-    st.markdown("### Synthèse globale")
-    st.info(f"**{titre_global}**\n\n{synthese_globale}")
-
-    # 6. Affichage notes par phase
-    st.markdown("### Notes par phase")
-    for phase, note in notes_par_phase.items():
-        st.write(f"- **{phase.capitalize()}** : {note:.2f} / 10")
-
-    st.markdown("### Radar des scores par phase")
-    col1, col2, col3 = st.columns([1, 6, 1])  # Centralise mieux l'affichage
-
-    with col2:
-        fig_radar = generer_radar_notes(notes_par_phase, figsize=(9, 9))  # Taille augmentée
-        st.pyplot(fig_radar)
-
-
-    if points_forts:
-        st.markdown("### Points forts")
-        for pf in points_forts:
-            st.markdown(f"<div style='background:#d4edda;padding:16px 24px;margin-bottom:10px;border-radius:10px;'>"
-                        f"<b>{pf['titre']}</b><br>{pf['explication']}</div>", unsafe_allow_html=True)
-
-    if points_a_ameliorer:
-        st.markdown("### Points à améliorer")
-        for pa in points_a_ameliorer:
-            st.markdown(f"<div style='background:#fff3cd;padding:16px 24px;margin-bottom:10px;border-radius:10px;'>"
-                        f"<b>{pa['titre']}</b><br>{pa['explication']}</div>", unsafe_allow_html=True)
-
-
-    # 9. Recommandations détaillées
-    if recommandations:
-        st.markdown("### Recommandations spécifiques")
-        for phase, erreur, reco in recommandations:
-            st.markdown(f"**[{phase}]** 🚩 {erreur}\n\n{reco}")
-
-
-        # 1. Affichage des graphes biomécaniques
-    st.markdown("<h3>📈 Dynamique des vitesses linéaires des segments (hanche, genou, cheville)</h3>", unsafe_allow_html=True)
-    fig_lin = generer_graphiques_vraie_sequence_proximale_distale_avec_phases_labels()
-    st.pyplot(fig_lin)
-
-    st.markdown("<h3>📊 Évolution des vitesses angulaires cuisse/jambe selon les phases </h3>", unsafe_allow_html=True)
-    fig_ang = generer_vitesses_angulaires_jambe_pic_1_9s()
-    st.pyplot(fig_ang)
-
-    nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
-    type_geste = st.session_state.get("type_geste", "Instep")
-
-    radar_path = "/mnt/data/radar_notes.png"
-    fig_radar.savefig(radar_path, dpi=150, bbox_inches='tight')
-
-    graphe1 = "/mnt/data/graphe_vraie_sequence_proximale_distale_avec_labels.png"
-    fig_lin.savefig(graphe1, dpi=150, bbox_inches='tight')
-
-    graphe2 = "/mnt/data/graphe_vitesses_angulaires_jambe_pic_1_9s.png"
-    fig_ang.savefig(graphe2, dpi=150, bbox_inches='tight')
-
-    # Toujours récupérer les bons chemins
-    video_path = video_path  # déjà défini plus haut (attention à la portée de la variable)
-    keypoints_all = st.session_state.get("keypoints_all", None)
-    impact_frame = st.session_state.get("frame_impact", None)
-    image_path = "/mnt/data/impact_pose.png"  # ou le dossier temp/outputs que tu utilises
-
-    # Régénère systématiquement l’image à l’impact avant le PDF
-    if keypoints_all is not None and video_path and impact_frame is not None:
-        from visualisation import enregistrer_image_pose
-        try:
-            enregistrer_image_pose(keypoints_all, impact_frame, video_path, output_path=image_path)
-            if not os.path.exists(image_path):
-                st.warning("L’image annotée à l’impact n’a pas été générée (fichier manquant).")
-        except Exception as e:
-            st.warning(f"Erreur lors de la génération de l'image à l'impact : {e}")
-    else:
-        st.warning("Impossible de générer l'image à l’impact : keypoints/vidéo/frame manquants.")
-
-    # ==========================
-    # Rapport PDF et enregistrement
-    # ==========================
-
-    st.markdown("### 📄 Rapport PDF")
-
-    # a) Préparation des noms et chemins
-    nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
-    type_long = st.session_state.get("type_geste", "Tir de cou-de-pied").strip()
-    GESTE_TO_LABEL = {
-        "Tir de cou-de-pied": "Instep",
-        "Tir intérieur du pied": "Inside",
-        "Passe intérieure du pied": "Passe"
-    }
-    label_type_geste = GESTE_TO_LABEL.get(type_long, "Tir")
-
-    nom_fichier_base = (
-        nom_joueuse.replace(" ", "_")
-        .replace("(", "")
-        .replace(")", "")
-        .replace("'", "")
-        .lower()
-    )
-    date_str = datetime.now().strftime("%Y%m%d")
-    nom_pdf = f"rapport_{label_type_geste.lower()}_{nom_fichier_base}_{date_str}.pdf"
-
-    radar_path = "/mnt/data/radar_notes.png"
-    graphe1 = "/mnt/data/graphe_vraie_sequence_proximale_distale_avec_labels.png"
-    graphe2 = "/mnt/data/graphe_vitesses_angulaires_jambe_pic_1_9s.png"
-    image_path = "/mnt/data/impact_pose.png"  # Si tu as une image annotée
-
-    rapport_genere = False
-    rapport_pdf_path = None
-
-    if st.button("📥 Télécharger le rapport PDF", use_container_width=True):
-        rapport_pdf_path = generer_rapport_pdf(
-            notes_par_phase=notes_par_phase,
+    if not existe_analyse(joueuse_id, st.session_state.type_geste, date_now):
+        enregistrer_analyse(
+            joueuse_id=joueuse_id,
+            technique=st.session_state.type_geste,
+            date_analyse=date_now,
             score_global=score_global,
-            details_score={},
-            points_forts=points_forts,
-            points_a_ameliorer=points_a_ameliorer,
-            recommandations=recommandations,
-            reco_globale=synthese_globale,
-            image_path=image_path,  # ← L’image annotée à l’impact, REGÉNÉRÉE JUSTE AVANT
-            graphe1=graphe1,
-            graphe2=graphe2,
-            radar_path=radar_path,
-            nom_fichier=nom_pdf,
-            nom_joueuse=nom_joueuse,
-            type_geste=label_type_geste
+            rapport_pdf_path=rapport_pdf_path,
+            video_annotee_path=video_annotee_path
         )
-
-        rapport_genere = True
-
-    # b) Affichage du bouton de téléchargement si le PDF a été généré
-    if rapport_genere and rapport_pdf_path and os.path.exists(rapport_pdf_path):
-        with open(rapport_pdf_path, "rb") as f:
-            st.download_button(
-                label="📤 Télécharger le rapport généré",
-                data=f,
-                file_name=nom_pdf,
-                use_container_width=True
-            )
-
-        # ==============================
-        # Enregistrement de l’analyse après génération du PDF
-        # ==============================
-
-        # PATCH sécurité: Toujours retrouver l'ID si absent (ou si mal propagé)
-        if not st.session_state.get("joueuse_id"):
-            nom_complet = st.session_state.get("joueuse_selectionnee", "")
-            categorie = st.session_state.get("categorie_joueuse", None)
-            from data_storage import get_joueuses_par_coach
-            joueuses = get_joueuses_par_coach(st.session_state["username"])
-            trouve = False
-            # 1) On tente nom complet + catégorie
-            for j in joueuses:
-                jid, nom, prenom, cat, *_ = j
-                if f"{prenom} {nom}" == nom_complet and cat == categorie:
-                    st.session_state.joueuse_id = jid
-                    trouve = True
-                    break
-            # 2) Sinon, nom seul
-            if not trouve and nom_complet:
-                for j in joueuses:
-                    jid, nom, prenom, cat, *_ = j
-                    if f"{prenom} {nom}" == nom_complet:
-                        st.session_state.joueuse_id = jid
-                        st.session_state.categorie_joueuse = cat
-                        trouve = True
-                        break
-            # 3) Sinon, prend la première joueuse du coach
-            if not trouve and joueuses:
-                jid, nom, prenom, cat, *_ = joueuses[0]
-                st.session_state.joueuse_id = jid
-                st.session_state.joueuse_selectionnee = f"{prenom} {nom}"
-                st.session_state.categorie_joueuse = cat
-
-        joueuse_id = st.session_state.get("joueuse_id")
-        date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        if not joueuse_id:
-            st.error("❌ Joueuse introuvable. Analyse non enregistrée.")
-            st.stop()
-
-        if not existe_analyse(joueuse_id, st.session_state.type_geste, date_now):
-            enregistrer_analyse(
-                joueuse_id=joueuse_id,
-                technique=st.session_state.type_geste,
-                date_analyse=date_now,
-                score_global=score_global,
-                rapport_pdf_path=rapport_pdf_path,
-                video_annotee_path=video_path
-            )
-            st.success("✅ Analyse enregistrée avec succès.")
-        else:
-            st.info("ℹ️ Une analyse identique vient d’être enregistrée.")
-
-    elif rapport_genere:
-        st.error("Le rapport n'a pas pu être généré.")
+        st.success("✅ Analyse enregistrée avec succès.")
+    else:
+        st.info("ℹ️ Une analyse identique vient d’être enregistrée.")

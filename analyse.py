@@ -266,7 +266,6 @@ def analyse_biomeca_instep():
     pied = st.session_state.pied_frappe.lower()
     ball_path = st.session_state.get("ball_position_path", None)
 
-    # 🚨 Vérification des moments clés
     if any(v is None for v in [t1, t2, t3]):
         st.error("❌ Moments clés (kick, impact, suivi) non définis. Impossible de continuer l'analyse.")
         return None, None, None
@@ -275,20 +274,15 @@ def analyse_biomeca_instep():
         st.error("❌ Les moments clés doivent être dans l'ordre : kick < impact < suivi.")
         return None, None, None
 
-    # 2. Extraction des données biomécaniques
     if "donnees" not in st.session_state:
         st.session_state.donnees = extraire_donnees_biomecaniques(video_path, ball_path, pied)
     donnees = st.session_state.donnees
 
-    # 🚨 Sécurité immédiate : Vérifier qu'il y a bien des keypoints 3D
     if donnees["keypoints_3d"] is None or len(donnees["keypoints_3d"]) == 0:
         st.error("❌ Aucun keypoint 3D détecté dans la vidéo. Veuillez vérifier la qualité ou le format de votre vidéo.")
         return None, None, None
 
-    # 3. Calcul des angles sur toutes les frames
     donnees["angles_all"] = [get_joint_angles(frame) for frame in donnees["keypoints_3d"]]
-
-    # 4. Préparation des vitesses et phases
     fps = get_fps_from_video(video_path)
     frames_kick = list(range(t1, t2 + 1))
 
@@ -303,10 +297,11 @@ def analyse_biomeca_instep():
     angles_impact = donnees["angles_all"][t2]
     angles_suivi = donnees["angles_all"][t3] if t3 < len(donnees["angles_all"]) else {}
 
-    # 5. Notation biomécanique
     notes_approche = noter_angles_par_cote("approche", pied, angles_approche, VALEURS_REF_instep)
     notes_kickstep = noter_angles_par_cote("kickstep", pied, angles_kick, VALEURS_REF_instep)
     note_cheville_impact = noter_angles_par_cote("kickstep", pied, angles_impact, VALEURS_REF_instep).get("cheville", 0)
+    
+    keypoints_all = st.session_state.donnees["keypoints_all"]
 
     vit_lin, vit_ang = donnees["v_lin"], donnees["v_ang"]
     eval_lin = verifier_logique_vitesses_lineaires(vit_lin, indices_par_phase)
@@ -317,7 +312,7 @@ def analyse_biomeca_instep():
     timing_msg = verifier_timing_impact(vit_lin["cheville"], t2)
     note_timing_impact = noter_evaluation_vitesse(timing_msg)
 
-    angle_approche, dx, dy = 40, 30, 35  # À remplacer si calculé automatiquement
+    angle_approche, dx, dy = 40, 30, 35  # exemple valeurs
     note_angle_approche = noter_evaluation_vitesse("correct")
     note_pied_appui = noter_evaluation_vitesse("correct")
 
@@ -337,7 +332,6 @@ def analyse_biomeca_instep():
     })
     titre_global, synthese_globale = generer_recommandation_globale(round(score_global, 1))
 
-    # 6. Résultats
     st.success(f"🎯 Score final : **{score_global}/10**")
     st.subheader("📊 Notes par phase")
     for phase, note in notes_par_phase.items():
@@ -360,7 +354,6 @@ def analyse_biomeca_instep():
     for phase, erreur, reco in recommandations:
         st.markdown(f"**[{phase}]** {erreur} → _{reco}_")
 
-    # 7. Segmentation
     total = len(donnees["keypoints_3d"])
     phases = segmenter_kick(total, t1, t2, t3)
 
@@ -375,14 +368,60 @@ def analyse_biomeca_instep():
         pied_frappe=pied
     )
 
-    # 8. Génération vidéo annotée
+        # === 1. Initialisation et récupération des variables ===
+
+    # Chemin de la vidéo d'origine (modifie selon ton workflow si besoin)
+    video_path = st.session_state.get("video_path", "outputs/video_test.mp4")
+
+    # Keypoints extraits pour chaque frame
+    keypoints_all = st.session_state.get("keypoints_all", None)
+    if keypoints_all is None:
+        st.error("❌ Keypoints non définis. Impossible de générer la vidéo annotée.")
+        st.stop()
+
+    # Liste des phases (par frame)
+    phases = st.session_state.get("phases", None)
+    if phases is None:
+        st.error("❌ Les phases du tir ne sont pas définies.")
+        st.stop()
+
+    # Pied de frappe choisi par l'utilisateur ("droit" ou "gauche")
+    pied_frappe = st.session_state.get("pied_frappe", "droit").lower()
+
+    # Vérification de la vidéo source
+    if not os.path.exists(video_path):
+        st.error(f"❌ Vidéo source introuvable : {video_path}")
+        st.stop()
+
+    # === 2. Génération de la vidéo annotée ===
+
+    video_out_path = "video_squelette.mp4"  # nom de la vidéo générée (modifiable)
     video_out_path = generer_video_annotee(
-        video_path,
-        donnees["keypoints_all"],
-        phases,
-        pied_frappe=pied,
-        frames_annotations=frames_annotations
+        video_path=video_path,
+        keypoints_all=keypoints_all,
+        phases=phases,
+        pied_frappe=pied_frappe,
+        output_path=video_out_path,
+        ralenti=3
     )
+
+    # === 3. Affichage dans Streamlit et téléchargement ===
+
+    st.subheader("🎞️ Vidéo annotée avec squelette et phases")
+    if video_out_path and os.path.exists(video_out_path):
+        col1, col2, col3 = st.columns([3, 2, 3])
+        with col2:
+            with open(video_out_path, "rb") as f:
+                video_bytes = f.read()
+            st.video(video_bytes, format="video/mp4")
+            st.download_button(
+                "⬇️ Télécharger la vidéo annotée",
+                data=video_bytes,
+                file_name=os.path.basename(video_out_path),
+                use_container_width=True
+            )
+    else:
+        st.info("Vidéo annotée non disponible.")
 
     st.subheader("🎞️ Vidéo annotée avec squelette et erreurs d’articulations")
     if os.path.exists(video_out_path):
@@ -393,12 +432,10 @@ def analyse_biomeca_instep():
             with open(video_out_path, "rb") as f:
                 st.download_button("⬇️ Télécharger la vidéo annotée", f, file_name="video_annotee_instep.mp4")
 
-    # 9. Animation 3D interactive
     st.subheader("🧍‍♂️ Animation 3D du squelette avec angles articulaires")
     fig = generer_animation_plotly(donnees["keypoints_3d"], donnees["angles_all"])
     st.plotly_chart(fig, use_container_width=True)
 
-    # 10. Graphiques des vitesses
     graph1, graph2 = tracer_graphiques_vitesses(
         vitesses_lin_px=vit_lin,
         vitesses_ang=vit_ang,
@@ -409,12 +446,9 @@ def analyse_biomeca_instep():
     )
 
     st.subheader("📈 Visualisations graphiques")
-    st.markdown("#### ➤ Vitesses linéaires (cheville, genou, hanche)")
     st.pyplot(graph1)
-    st.markdown("#### ➤ Vitesses angulaires (cuisse, jambe)")
     st.pyplot(graph2)
 
-    # 11. Radar des scores
     radar_path = tracer_radar_notes(notes_par_phase, output_path="graphes/radar_notes.png")
     if os.path.exists(radar_path):
         st.subheader("Radar des scores par phase")
@@ -422,8 +456,10 @@ def analyse_biomeca_instep():
         with col2:
             st.image(radar_path, use_container_width=True)
 
-    # 12. Rapport PDF
+    # GÉNÉRATION RAPPORT PDF
     st.markdown("📄 Rapport PDF")
+    rapport_genere = False
+
     nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
     type_long = st.session_state.type_geste.strip()
     GESTE_TO_LABEL = {
@@ -436,7 +472,7 @@ def analyse_biomeca_instep():
     date_str = datetime.now().strftime("%Y%m%d")
     nom_pdf = f"rapport_instep_{nom_fichier_base}_{date_str}.pdf"
 
-    pose_path = "graphes/pose_impact.png"
+    pose_path = os.path.join(os.getcwd(), "impact_pose.png")
 
     if st.button("📥 Télécharger le rapport PDF", use_container_width=True):
         rapport_path = generer_rapport_pdf(
@@ -450,10 +486,14 @@ def analyse_biomeca_instep():
             image_path=pose_path,
             graphe1="graphes/graphe_vitesse_lineaire.png",
             graphe2="graphes/graphe_vitesse_angulaire.png",
+            radar_path=radar_path,
             nom_fichier=nom_pdf,
             nom_joueuse=nom_joueuse,
             type_geste=label_type_geste
         )
+        rapport_genere = True
+
+    if rapport_genere:
         with open(rapport_path, "rb") as f:
             st.download_button(label="📤 Télécharger le rapport généré", data=f, file_name=nom_pdf, use_container_width=True)
 
@@ -461,7 +501,6 @@ def analyse_biomeca_instep():
     chemin_video = video_out_path if os.path.exists(video_out_path) else None
 
     return score_global, chemin_rapport, chemin_video
-
 
 
 def analyse_biomeca_passe():

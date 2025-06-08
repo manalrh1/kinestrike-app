@@ -30,32 +30,55 @@ COULEURS_PHASES = {
 # ----------------------------------------------------------
 
 def generer_video_annotee(video_path, keypoints_all, phases, pied_frappe,
-                          output_path="video_annotee_squelette.mp4",
-                          ralenti=3,
-                          frames_annotations=None):
+                          output_path="video_squelette.mp4", ralenti=3):
     import cv2
     from moviepy.editor import ImageSequenceClip
-    from PIL import ImageFont, ImageDraw, Image
     import numpy as np
+    import os
 
+    # Liaisons du squelette
     LIAISONS = [
-        (11, 13), (13, 15),
-        (12, 14), (14, 16),
-        (11, 12), (23, 24),
-        (11, 23), (12, 24),
-        (23, 25), (25, 27),
-        (24, 26), (26, 28)
+        (11, 13), (13, 15),   # Bras gauche
+        (12, 14), (14, 16),   # Bras droit
+        (11, 12),             # Épaules
+        (11, 23), (23, 25), (25, 27),  # Tronc gauche
+        (12, 24), (24, 26), (26, 28),  # Tronc droit
+        (23, 24)              # Bassin
     ]
 
-    color_squelette = (0, 255, 255)
+    # Couleurs des segments
+    COLORS = {
+        "bras": (255, 0, 255),    # Violet
+        "jambes": (0, 255, 0),    # Vert
+        "tronc": (255, 0, 0),     # Rouge
+        "points": (0, 0, 255)     # Bleu pour les points
+    }
+
+    # Couleurs par phase
+    COLORS_PHASES = {
+        "approche": (0, 255, 0),       # Vert
+        "kick_step": (255, 165, 0),    # Orange
+        "impact": (255, 0, 0),         # Rouge
+        "suivi": (0, 0, 255)           # Bleu
+    }
+
+    def get_color(a, b):
+        bras = {11, 12, 13, 14, 15, 16}
+        jambes = {23, 24, 25, 26, 27, 28}
+        if a in bras and b in bras:
+            return COLORS["bras"]
+        elif a in jambes and b in jambes:
+            return COLORS["jambes"]
+        else:
+            return COLORS["tronc"]
+
+    if not os.path.exists(video_path):
+        print(f"Erreur : Fichier vidéo introuvable : {video_path}")
+        return None
+
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     frames = []
-
-    try:
-        font_pil = ImageFont.truetype("arial.ttf", 18)
-    except:
-        font_pil = ImageFont.load_default()
 
     for i in range(min(len(keypoints_all), len(phases))):
         ret, frame = cap.read()
@@ -65,72 +88,37 @@ def generer_video_annotee(video_path, keypoints_all, phases, pied_frappe,
         label = phases[i]
         keypoints = keypoints_all[i]
 
-        # Tracer squelette
+        # Détermine la couleur de phase actuelle
+        couleur_phase = COLORS_PHASES.get(label, (200, 200, 200))  # Gris par défaut
+
+        # Tracer les lignes du squelette
         for a, b in LIAISONS:
             if a < len(keypoints) and b < len(keypoints):
                 xa, ya = keypoints[a]
                 xb, yb = keypoints[b]
                 if xa > 0 and ya > 0 and xb > 0 and yb > 0:
-                    cv2.line(frame, (int(xa), int(ya)), (int(xb), int(yb)), color_squelette, 2)
+                    cv2.line(frame, (int(xa), int(ya)), (int(xb), int(yb)), get_color(a, b), 3)
 
+        # Tracer les points
         for (x, y) in keypoints:
             if x > 0 and y > 0:
-                cv2.circle(frame, (int(x), int(y)), 4, color_squelette, -1)
+                cv2.circle(frame, (int(x), int(y)), 5, COLORS["points"], -1)
 
-        # Convertir en PIL pour annotation texte avec ° via image
-        frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        draw = ImageDraw.Draw(frame_pil)
-
-        if frames_annotations and i in frames_annotations:
-            for idx, couleur, texte in frames_annotations[i]:
-                if idx < len(keypoints):
-                    x, y = keypoints[idx]
-                    if x > 0 and y > 0:
-                        pt_x, pt_y = int(x), int(y)
-                        is_right = idx in [12, 14, 24, 26, 28]
-                        offset_x = 20 if is_right else -60
-                        offset_y = -5
-                        box_x = pt_x + offset_x
-                        box_y = pt_y + offset_y
-
-                        # Nettoyage et texte
-                        try:
-                            angle_val = int(texte.strip().split("°")[0])
-                            texte_final = f"{angle_val}°"
-                        except:
-                            texte_final = "--"
-
-                        # Taille texte
-                        bbox = font_pil.getbbox(texte_final)
-                        text_w = bbox[2] - bbox[0]
-                        text_h = bbox[3] - bbox[1]
-
-                        # Ligne jaune
-                        ligne_x = box_x + (text_w + 5 if is_right else 0)
-                        ligne_y = box_y + 10
-                        draw.line([(pt_x, pt_y), (ligne_x, ligne_y)], fill=color_squelette, width=1)
-
-                        # Rectangle
-                        draw.rectangle([box_x, box_y, box_x + text_w + 6, box_y + text_h + 6], fill=color_squelette)
-
-                        # Texte
-                        draw.text((box_x + 3, box_y + 3), texte_final, fill=(0, 0, 0), font=font_pil)
-
-        # Reconversion PIL → OpenCV
-        frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
-
-        # Texte : Phase et pied (sans Unicode → OpenCV OK)
+        # Ajouter le texte Phase + Pied de frappe
         cv2.putText(frame, f"Phase : {label}", (30, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
-        cv2.putText(frame, f"Pied de frappe : {pied_frappe}", (30, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 150, 255), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, couleur_phase, 3)
 
+        cv2.putText(frame, f"Pied de frappe : {pied_frappe}", (30, 100),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 102, 204), 2)
+
+        # Convertir frame pour MoviePy
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frames.append(frame_rgb)
 
     cap.release()
 
     if not frames:
+        print("Erreur : Aucun frame valide généré.")
         return None
 
     clip = ImageSequenceClip(frames, fps=max(1, fps / ralenti))
@@ -148,6 +136,7 @@ def detecter_postures_anotees(notes_approche_angles, notes_kickstep_angles,
     phases = st.session_state.donnees.get("phases") or ["kickstep"] * len(keypoints_all)
     frames_annotations = {}
 
+    # Mapping articulations <-> index MediaPipe
     mapping_keypoints = {
         "epaule": {"droit": 12, "gauche": 11},
         "coude": {"droit": 14, "gauche": 13},
@@ -155,12 +144,11 @@ def detecter_postures_anotees(notes_approche_angles, notes_kickstep_angles,
         "genou": {"droit": 26, "gauche": 25},
         "cheville": {"droit": 28, "gauche": 27}
     }
-    def generer_annotation(angle_mesure, ref_mean, ref_std):
-        texte = f"{int(angle_mesure)}°"
-        return (0, 255, 255), texte  # toujours jaune, pas d’écart
 
+    def verifier_correctitude(angle_mesure, ref_mean, ref_std):
+        # Vérifie si angle dans [mean - std, mean + std]
+        return abs(angle_mesure - ref_mean) <= ref_std
 
-    # Côtés
     cote_kick = pied_frappe
     cote_non_kick = "gauche" if pied_frappe == "droit" else "droit"
 
@@ -172,7 +160,7 @@ def detecter_postures_anotees(notes_approche_angles, notes_kickstep_angles,
         elif phase in ["kickstep", "kick_step", "impact"]:
             ref_moment = ref_angles.get("kickstep", {}).get("kick", {})
         else:
-            continue  # pas de mesure pendant le suivi
+            continue  # Ignore les phases "suivi" où il n'y a pas d'angles à vérifier
 
         for articulation in mapping_keypoints:
             for cote in ["droit", "gauche"]:
@@ -187,10 +175,16 @@ def detecter_postures_anotees(notes_approche_angles, notes_kickstep_angles,
 
                 ref_mean, ref_std = ref
                 idx = mapping_keypoints[articulation][cote]
-                couleur, texte = generer_annotation(angle_mesure, ref_mean, ref_std)
-                frames_annotations.setdefault(i, []).append((idx, couleur, texte))
+
+                if verifier_correctitude(angle_mesure, ref_mean, ref_std):
+                    couleur = (0, 255, 0)  # Vert
+                else:
+                    couleur = (255, 0, 0)  # Rouge
+
+                frames_annotations.setdefault(i, []).append((idx, couleur))
 
     return frames_annotations
+
 
 
 # ----------------------------------------------------------
@@ -261,17 +255,14 @@ def enregistrer_image_pose(keypoints_all, frame_idx, video_path, output_path="im
     return output_path
 
 from scipy.interpolate import make_interp_spline
+import matplotlib.patches as mpatches
+
 
 def tracer_graphiques_vitesses(
     vitesses_lin_px, vitesses_ang, phases,
     pied_frappe=None, fps=30,
     pas_affichage=30
 ):
-    from scipy.interpolate import make_interp_spline
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import os
-
     couleurs = {
         "approche": "blue",
         "kick_step": "orange",
@@ -281,8 +272,18 @@ def tracer_graphiques_vitesses(
 
     temps = np.arange(len(vitesses_lin_px["cheville"])) / fps
 
+    # Définir légende externe des phases
+    phase_colors = {
+        "approche": "blue",
+        "kick_step": "orange",
+        "impact": "red",
+        "suivi": "green"
+    }
+    patches = [mpatches.Patch(color=color, label=phase) for phase, color in phase_colors.items()]
+
     # === 1. VITESSES LINÉAIRES (px/s) ===
-    fig1, ax1 = plt.subplots(figsize=(10, 4))
+    fig1, ax1 = plt.subplots(figsize=(6, 2))
+
     for cle, couleur in zip(["cheville", "genou", "hanche"], ['red', 'green', 'blue']):
         vit_px_s = np.array([v if not np.isnan(v) else np.nan for v in vitesses_lin_px[cle]])
         temps_filtrés = temps[::pas_affichage]
@@ -303,18 +304,28 @@ def tracer_graphiques_vitesses(
         t = i / fps
         ax1.axvspan(t - 0.5/fps, t + 0.5/fps, color=couleurs.get(phase, 'gray'), alpha=0.2)
 
-    ax1.set_xlim(left=0)  # ✅ Forcer l'axe X à partir de 0
-    ax1.set_title("Vitesses linéaires (px/s)")
-    ax1.set_xlabel("Temps (s)")
-    ax1.set_ylabel("Vitesse (px/s)")
-    ax1.legend()
-    ax1.grid(True)
+    ax1.set_xlim(left=0)
+    ax1.set_xlabel("Temps (s)", fontsize=10)
+    ax1.set_yticks([])
+    ax1.set_ylabel("")
+    ax1.tick_params(axis='x', labelsize=8)  # ✅ Taille des ticks X réduite
+    for spine in ax1.spines.values():
+        spine.set_visible(False)
+
+    # ✅ Légende biomécanique (courbes) avec taille réduite
+    ax1.legend(loc="upper left", frameon=False, fontsize=8)
+
+    # ✅ Légende des phases (externe)
+    fig1.legend(handles=patches, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=8)
+
+    ax1.grid(True, color='lightgray', linestyle='--', linewidth=0.5)
     fig1.tight_layout()
     os.makedirs("graphes", exist_ok=True)
-    fig1.savefig("graphes/graphe_vitesse_lineaire.png")
+    fig1.savefig("graphes/graphe_vitesse_lineaire.png", bbox_inches='tight')
 
     # === 2. VITESSES ANGULAIRES (°/s) ===
-    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    fig2, ax2 = plt.subplots(figsize=(6, 2))
+
     for seg, couleur in zip(["cuisse", "jambe"], ['purple', 'brown']):
         y_vals = []
         indices = []
@@ -339,17 +350,22 @@ def tracer_graphiques_vitesses(
         t = i / fps
         ax2.axvspan(t - 0.5/fps, t + 0.5/fps, color=couleurs.get(phase, 'gray'), alpha=0.2)
 
-    ax2.set_xlim(left=0)  # ✅ Forcer l'axe X à partir de 0 aussi ici
-    ax2.set_title("Vitesses angulaires (°/s)")
-    ax2.set_xlabel("Temps (s)")
-    ax2.set_ylabel("Vitesse angulaire (°/s)")
-    ax2.legend()
-    ax2.grid(True)
+    ax2.set_xlim(left=0)
+    ax2.set_xlabel("Temps (s)", fontsize=10)
+    ax2.set_yticks([])
+    ax2.set_ylabel("")
+    ax2.tick_params(axis='x', labelsize=8)  # ✅ Taille des ticks X réduite
+    for spine in ax2.spines.values():
+        spine.set_visible(False)
+
+    ax2.legend(loc="upper left", frameon=False, fontsize=8)
+    fig2.legend(handles=patches, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=8)
+
+    ax2.grid(True, color='lightgray', linestyle='--', linewidth=0.5)
     fig2.tight_layout()
-    fig2.savefig("graphes/graphe_vitesse_angulaire.png")
+    fig2.savefig("graphes/graphe_vitesse_angulaire.png", bbox_inches='tight')
 
     return fig1, fig2
-
 
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -405,7 +421,6 @@ def tracer_radar_notes(notes_par_phase, output_path="graphes/radar_notes.png"):
     ax.set_thetagrids(np.degrees(angles), labels, fontsize=10, ha='center')
 
     ax.set_ylim(0, 10)
-    ax.set_title("Radar des scores par phase", fontsize=12, pad=20)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path, bbox_inches="tight", dpi=300)
@@ -415,9 +430,6 @@ def tracer_radar_notes(notes_par_phase, output_path="graphes/radar_notes.png"):
 
 
 # squelette3d.py
-import numpy as np
-import plotly.graph_objects as go
-
 import numpy as np
 import plotly.graph_objects as go
 
@@ -482,36 +494,64 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
                         showlegend=False
                     ))
 
+        # Affichage des angles : police grande, couleur noire, position très proche articulation
         angles = angles_par_frame[i]
         for articulation in ['genou_droit', 'genou_gauche', 'hanche_droit', 'hanche_gauche',
-                              'cheville_droit', 'cheville_gauche', 'epaule_droite', 'epaule_gauche']:
+                             'cheville_droit', 'cheville_gauche', 'epaule_droite', 'epaule_gauche',
+                             'coude_droit', 'coude_gauche']:
             if articulation in angles:
                 joint_idx = {
                     "genou_droit": 25, "genou_gauche": 26,
                     "hanche_droit": 23, "hanche_gauche": 24,
                     "cheville_droit": 27, "cheville_gauche": 28,
-                    "epaule_droite": 11, "epaule_gauche": 12
+                    "epaule_droite": 11, "epaule_gauche": 12,
+                    "coude_droit": 13, "coude_gauche": 14
                 }[articulation]
                 x_, y_, z_ = frame[joint_idx]
                 if all([-0.5 < c < 2 for c in (x_, y_, z_)]):
                     angle = angles[articulation]
+
+                    offset_y = 0.01 if 'gauche' in articulation else -0.01  # Collé à l'articulation
+                    offset_z = 0.015  # Petit décalage vertical
+
                     traces.append(go.Scatter3d(
-                        x=[x_], y=[y_], z=[z_],
+                        x=[x_], y=[y_ + offset_y], z=[z_ + offset_z],
                         mode='text',
                         text=[f"{int(angle)}°"],
-                        textposition='top center',
-                        textfont=dict(size=30, color="black"),  # Police augmentée à 30
-                        showlegend=False
+                        textposition='middle center',
+                        textfont=dict(
+                            size=18,        # Plus grand (lisible)
+                            color="black",  # Noir
+                            family="Arial"
+                        ),
+                        showlegend=False,
+                        hoverinfo='skip'
                     ))
 
         frames.append(go.Frame(data=traces, name=f"frame_{i}"))
 
-    # 🛑 Important : initialiser sans caméra fixée pour laisser l'utilisateur tourner/zoomer
+    # Configuration de la scène avec dimensions fixes
     scene_settings = dict(
-        xaxis=dict(title="X", range=x_range),
-        yaxis=dict(title="Y", range=y_range),
-        zaxis=dict(title="Z", range=z_range),
-        aspectmode="cube"
+        xaxis=dict(
+            title="X",
+            range=x_range,
+            showgrid=True,
+            gridcolor="lightgray"
+        ),
+        yaxis=dict(
+            title="Y",
+            range=y_range,
+            showgrid=True,
+            gridcolor="lightgray"
+        ),
+        zaxis=dict(
+            title="Z",
+            range=z_range,
+            showgrid=True,
+            gridcolor="lightgray"
+        ),
+        aspectmode="cube",
+        bgcolor="rgba(240,240,240,0.1)"
     )
 
     fig = go.Figure(
@@ -521,59 +561,92 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
             width=900,
             height=800,
             scene=scene_settings,
-            margin=dict(l=0, r=0, b=0, t=40),
+            margin=dict(l=0, r=0, b=0, t=60),
             updatemenus=[],
             sliders=[]
         ),
         frames=frames
     )
 
-    # ✅ Laisser l'utilisateur régler la vue → puis Fixer la caméra quand il clique Play
+    # Play/Pause/Stop + slider
     fig.update_layout(
         updatemenus=[{
             "type": "buttons",
-            "buttons": [dict(
-                label="▶️ Play",
-                method="animate",
-                args=[None, {
-                    "frame": {"duration": 100, "redraw": True},
-                    "fromcurrent": True,
-                    "mode": "immediate",
-                    "transition": {"duration": 0},
-                    # 🛑 Très important : conserver la vue utilisateur
-                    "layout": {
-                        "scene": {
-                            "camera": dict(
-                                eye=dict(x=1.25, y=1.25, z=1.25)
-                            )
-                        }
-                    }
-                }]
-            )]
+            "direction": "left",
+            "x": 0.1,
+            "y": 1.02,
+            "xanchor": "left",
+            "yanchor": "top",
+            "buttons": [
+                dict(
+                    label="⏸️ Pause",
+                    method="animate",
+                    args=[[None], {
+                        "frame": {"duration": 0, "redraw": False},
+                        "mode": "immediate",
+                        "transition": {"duration": 0}
+                    }]
+                ),
+                dict(
+                    label="▶️ Play",
+                    method="animate",
+                    args=[None, {
+                        "frame": {"duration": 150, "redraw": True},
+                        "fromcurrent": True,
+                        "mode": "immediate",
+                        "transition": {"duration": 50},
+                    }]
+                ),
+                dict(
+                    label="⏹️ Stop",
+                    method="animate",
+                    args=[[frames[0].name], {
+                        "frame": {"duration": 0, "redraw": True},
+                        "mode": "immediate",
+                        "transition": {"duration": 0}
+                    }]
+                )
+            ]
         }]
     )
 
-    # ✅ Sliders fixés aussi
     fig.update_layout(
         sliders=[{
             "steps": [dict(
                 args=[[f.name], {
                     "frame": {"duration": 0, "redraw": True},
                     "mode": "immediate",
-                    "transition": {"duration": 0},
-                    "layout": {
-                        "scene": {
-                            "camera": dict(
-                                eye=dict(x=1.25, y=1.25, z=1.25)
-                            )
-                        }
-                    }
+                    "transition": {"duration": 0}
                 }],
-                label=str(i),
+                label=f"Frame {i+1}",
                 method="animate"
             ) for i, f in enumerate(frames)],
-            "active": 0
+            "active": 0,
+            "currentvalue": {"prefix": "Frame: "},
+            "len": 0.8,
+            "x": 0.1,
+            "y": 0,
+            "xanchor": "left",
+            "yanchor": "top"
         }]
+    )
+
+    fig.update_layout(
+        scene_camera=dict(
+            eye=dict(x=1.5, y=1.5, z=1.2),
+            center=dict(x=0, y=0, z=0),
+            up=dict(x=0, y=0, z=1)
+        ),
+        scene=dict(
+            **scene_settings,
+            camera=dict(
+                projection=dict(type="perspective")
+            )
+        ),
+        transition={
+            'duration': 0,
+            'easing': 'linear'
+        }
     )
 
     return fig

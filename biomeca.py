@@ -83,6 +83,10 @@ def get_joint_angles(frame):
         angle_epaule_droite = calculate_angle_3d(coude_droit, epaule_droite, hanche_droite)
         angle_epaule_gauche = calculate_angle_3d(coude_gauche, epaule_gauche, hanche_gauche)
 
+        # === Calcul des angles des coudes ===
+        angle_coude_droit = calculate_angle_3d(epaule_droite, coude_droit, poignet_droit)
+        angle_coude_gauche = calculate_angle_3d(epaule_gauche, coude_gauche, poignet_gauche)
+
         return {
             'genou_droit': round(angle_genou_droit, 1),
             'cheville_droit': round(angle_cheville_droit, 1),
@@ -91,8 +95,11 @@ def get_joint_angles(frame):
             'cheville_gauche': round(angle_cheville_gauche, 1),
             'hanche_gauche': round(angle_hanche_gauche, 1),
             'epaule_droite': round(angle_epaule_droite, 1),
-            'epaule_gauche': round(angle_epaule_gauche, 1)
+            'epaule_gauche': round(angle_epaule_gauche, 1),
+            'coude_droit': round(angle_coude_droit, 1),
+            'coude_gauche': round(angle_coude_gauche, 1)
         }
+
     except Exception as e:
         return {}
 
