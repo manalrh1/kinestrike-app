@@ -1,25 +1,23 @@
 # detect_ball_yolo.py
-
 import cv2
 import pickle
 import os
 from tempfile import gettempdir
-import sys
-
-# ==== PATCH pour Streamlit et YOLO ====
-if 'streamlit' in sys.modules:
-    import signal
-    def noop(*args, **kwargs):
-        pass
-    signal.signal = noop
-
-from ultralytics import YOLO
 
 def detect_ball_yolo(video_path, output_path=None, conf=0.4):
     """
     Utilise YOLOv8s pour détecter la position du ballon dans chaque frame d'une vidéo.
     Sauvegarde les positions dans un fichier .pkl.
     """
+    import sys
+    if 'streamlit' in sys.modules:
+        import signal
+        def noop(*args, **kwargs):
+            pass
+        signal.signal = noop
+
+    from ultralytics import YOLO  # <-- SEULEMENT ici, à l'intérieur de la fonction
+
     model = YOLO("yolov8s.pt")
 
     cap = cv2.VideoCapture(video_path)
@@ -31,10 +29,8 @@ def detect_ball_yolo(video_path, output_path=None, conf=0.4):
         if not ret:
             break
 
-        # Prédiction
         results = model.predict(source=frame, conf=conf, verbose=False)[0]
 
-        # On cherche la classe "ballon" (cls == 0)
         for r in results.boxes.data:
             x1, y1, x2, y2, score, cls = r.tolist()
             if int(cls) == 0:
