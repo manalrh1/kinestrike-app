@@ -1012,13 +1012,13 @@ elif st.session_state.etape == 7:
     nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
     type_geste = st.session_state.get("type_geste", "Instep")
 
-    radar_path = "/mnt/data/radar_notes.png"
+    radar_path = "radar_notes.png"
     fig_radar.savefig(radar_path, dpi=150, bbox_inches='tight')
 
-    graphe1 = "/mnt/data/graphe_vraie_sequence_proximale_distale_avec_labels.png"
+    graphe1 = "graphe_vraie_sequence_proximale_distale_avec_labels.png"
     fig_lin.savefig(graphe1, dpi=150, bbox_inches='tight')
 
-    graphe2 = "/mnt/data/graphe_vitesses_angulaires_jambe_pic_1_9s.png"
+    graphe2 = "graphe_vitesses_angulaires_jambe_pic_1_9s.png"
     fig_ang.savefig(graphe2, dpi=150, bbox_inches='tight')
 
     # Toujours récupérer les bons chemins
