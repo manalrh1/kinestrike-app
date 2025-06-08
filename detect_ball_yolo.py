@@ -1,18 +1,11 @@
-#detect_ball_yolo
 import cv2
 import pickle
 import os
 from tempfile import gettempdir
-from ultralytics import YOLO
 
 def detect_ball_yolo(video_path, output_path=None, conf=0.4):
     from ultralytics import YOLO
-    """
-    Utilise YOLOv8s pour détecter la position du ballon dans chaque frame d'une vidéo.
-    Sauvegarde les positions dans un fichier .pkl.
-    """
     model = YOLO("yolov8s.pt")
-
     cap = cv2.VideoCapture(video_path)
     frame_idx = 0
     ball_positions = {}
