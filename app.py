@@ -1176,3 +1176,6 @@ elif st.session_state.etape == 7:
 
     elif rapport_genere:
         st.error("❌ Le rapport n'a pas pu être généré.")
+        st.success("✅ Analyse enregistrée avec succès.")
+    else:
+        st.info("ℹ️ Une analyse identique vient d’être enregistrée.")

@@ -130,6 +130,8 @@ RECOMMANDATIONS_GLOBALES = {
         "✅ Correct",
         "Le tir est globalement bien réalisé, avec une structure technique cohérente. "
         "Quelques désajustements mineurs peuvent subsister "
+
+        "Quelques désajustements mineurs peuvent subsister, "
         ", mais le geste reste fonctionnel et efficace dans la majorité des cas. "
         "Un travail ciblé sur certaines phases permettra de progresser rapidement."
     ),

@@ -432,7 +432,10 @@ def tracer_radar_notes(notes_par_phase, output_path="graphes/radar_notes.png"):
 # squelette3d.py
 import numpy as np
 import plotly.graph_objects as go
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
 def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
     LIAISONS = [
         (11, 13), (13, 15),
@@ -494,11 +497,19 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
                         showlegend=False
                     ))
 
+<<<<<<< HEAD
         # Affichage des angles : police grande, couleur noire, position très proche articulation
         angles = angles_par_frame[i]
         for articulation in ['genou_droit', 'genou_gauche', 'hanche_droit', 'hanche_gauche',
                              'cheville_droit', 'cheville_gauche', 'epaule_droite', 'epaule_gauche',
                              'coude_droit', 'coude_gauche']:
+=======
+        # ✅ Affichage des angles avec taille réduite et position fixe
+        angles = angles_par_frame[i]
+        for articulation in ['genou_droit', 'genou_gauche', 'hanche_droit', 'hanche_gauche',
+                              'cheville_droit', 'cheville_gauche', 'epaule_droite', 'epaule_gauche',
+                              'coude_droit', 'coude_gauche']:
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
             if articulation in angles:
                 joint_idx = {
                     "genou_droit": 25, "genou_gauche": 26,
@@ -510,22 +521,41 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
                 x_, y_, z_ = frame[joint_idx]
                 if all([-0.5 < c < 2 for c in (x_, y_, z_)]):
                     angle = angles[articulation]
+<<<<<<< HEAD
 
                     offset_y = 0.01 if 'gauche' in articulation else -0.01  # Collé à l'articulation
                     offset_z = 0.015  # Petit décalage vertical
 
                     traces.append(go.Scatter3d(
                         x=[x_], y=[y_ + offset_y], z=[z_ + offset_z],
+=======
+                    
+                    # Offset pour éviter que le texte chevauche le point
+                    offset_y = 0.05 if 'gauche' in articulation else -0.05
+                    
+                    traces.append(go.Scatter3d(
+                        x=[x_], y=[y_ + offset_y], z=[z_ + 0.05],
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
                         mode='text',
                         text=[f"{int(angle)}°"],
                         textposition='middle center',
                         textfont=dict(
+<<<<<<< HEAD
                             size=18,        # Plus grand (lisible)
                             color="black",  # Noir
                             family="Arial"
                         ),
                         showlegend=False,
                         hoverinfo='skip'
+=======
+                            size=10,  # Taille réduite à 10
+                            color="white",
+                            family="Arial"  # Police Arial standard
+                        ),
+                        showlegend=False,
+                        # ✅ Stabiliser la taille du texte pendant l'animation
+                        hoverinfo='skip'  # Éviter les interactions qui changent l'affichage
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
                     ))
 
         frames.append(go.Frame(data=traces, name=f"frame_{i}"))
@@ -533,19 +563,31 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
     # Configuration de la scène avec dimensions fixes
     scene_settings = dict(
         xaxis=dict(
+<<<<<<< HEAD
             title="X",
+=======
+            title="X", 
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
             range=x_range,
             showgrid=True,
             gridcolor="lightgray"
         ),
         yaxis=dict(
+<<<<<<< HEAD
             title="Y",
+=======
+            title="Y", 
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
             range=y_range,
             showgrid=True,
             gridcolor="lightgray"
         ),
         zaxis=dict(
+<<<<<<< HEAD
             title="Z",
+=======
+            title="Z", 
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
             range=z_range,
             showgrid=True,
             gridcolor="lightgray"
@@ -561,14 +603,22 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
             width=900,
             height=800,
             scene=scene_settings,
+<<<<<<< HEAD
             margin=dict(l=0, r=0, b=0, t=60),
+=======
+            margin=dict(l=0, r=0, b=0, t=60),  # Plus de marge en haut pour les boutons
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
             updatemenus=[],
             sliders=[]
         ),
         frames=frames
     )
 
+<<<<<<< HEAD
     # Play/Pause/Stop + slider
+=======
+    # ✅ Boutons Play et Pause améliorés
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
     fig.update_layout(
         updatemenus=[{
             "type": "buttons",
@@ -610,6 +660,10 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
         }]
     )
 
+<<<<<<< HEAD
+=======
+    # ✅ Slider amélioré avec stabilité
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
     fig.update_layout(
         sliders=[{
             "steps": [dict(
@@ -618,7 +672,11 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
                     "mode": "immediate",
                     "transition": {"duration": 0}
                 }],
+<<<<<<< HEAD
                 label=f"Frame {i+1}",
+=======
+                label=f"Frame {i+1}",  # Labels plus clairs
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
                 method="animate"
             ) for i, f in enumerate(frames)],
             "active": 0,
@@ -631,23 +689,42 @@ def generer_animation_plotly(keypoints_3d, angles_par_frame, phases=None):
         }]
     )
 
+<<<<<<< HEAD
+=======
+    # ✅ Configuration pour maintenir la vue et taille stable
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
     fig.update_layout(
         scene_camera=dict(
             eye=dict(x=1.5, y=1.5, z=1.2),
             center=dict(x=0, y=0, z=0),
             up=dict(x=0, y=0, z=1)
         ),
+<<<<<<< HEAD
         scene=dict(
             **scene_settings,
             camera=dict(
                 projection=dict(type="perspective")
             )
         ),
+=======
+        # ✅ Empêcher le redimensionnement automatique
+        scene=dict(
+            **scene_settings,
+            camera=dict(
+                projection=dict(type="perspective")  # Vue perspective fixe
+            )
+        ),
+        # ✅ Configuration pour stabilité pendant l'animation
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
         transition={
             'duration': 0,
             'easing': 'linear'
         }
     )
+<<<<<<< HEAD
 
     return fig
+=======
+>>>>>>> 8f1c132 (🔧 Mise à jour complète du projet + fix requirements pour Streamlit Cloud)
 
+    return fig

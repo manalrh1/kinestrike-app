@@ -47,6 +47,8 @@ class RapportPDF(FPDF):
         self.cell(0, 10, title, ln=True, align="C")
         self.set_font("DejaVu", "", 11)
         self.ln(2)
+        self.ln(2)  # petit espace après
+
 
     def safe_multicell(self, text):
         self.set_x(10)
@@ -77,6 +79,10 @@ def generer_rapport_pdf(notes_par_phase, score_global, details_score,
     if os.path.exists(image_path):
         pdf.ln(5)
         image_width = 60
+    # ✅ Image de la pose à l’impact
+    if os.path.exists(image_path):
+        pdf.ln(5)
+        image_width = 100
         x_position = (pdf.w - image_width) / 2
         pdf.image(image_path, x=x_position, w=image_width)
         pdf.ln(8)
@@ -133,7 +139,7 @@ def generer_rapport_pdf(notes_par_phase, score_global, details_score,
         pdf.safe_multicell("Aucune faiblesse majeure détectée.")
     pdf.ln(4)
 
-        # 5. Recommandations spécifiques
+    # 5. Recommandations spécifiques
     pdf.section_title("5. Recommandations spécifiques", 153, 51, 255)
     for phase, erreur, reco in recommandations:
         # Découpage Objectif et Exercice
@@ -170,6 +176,7 @@ def generer_rapport_pdf(notes_par_phase, score_global, details_score,
     pdf.ln(2)
 
 
+
     # 6. Synthèse globale
     pdf.section_title("6. Synthèse globale", 255, 102, 0)
     pdf.safe_multicell(reco_globale)
@@ -192,8 +199,26 @@ def generer_rapport_pdf(notes_par_phase, score_global, details_score,
         pdf.image(graphe1, x=x_position, w=image_width)
         pdf.ln(6)
 
+    # Radar des scores en premier
+    if os.path.exists(radar_path):
+        pdf.centered_title("Radar des scores par phase", size=12)
+        radar_width = 100
+        x_position = (pdf.w - radar_width) / 2
+        pdf.image(radar_path, x=x_position, w=radar_width)
+        pdf.ln(10)  # espace après le radar
+
+    # Graphique – Vitesses pendant le Kick Step et l’impact
+    if os.path.exists(graphe1):
+        pdf.centered_title("Évolution des vitesses segmentaires", size=12)
+        image_width = 160
+        x_position = (pdf.w - image_width) / 2
+        pdf.image(graphe1, x=x_position, w=image_width)
+        pdf.ln(10)
+
+    # Graphique – Évolution globale de la vitesse du pied
     if os.path.exists(graphe2):
         pdf.centered_title("Dynamique des vitesses linéaires des segments (hanche, genou, cheville)", size=12)
+        pdf.centered_title("Évolution de la vitesse du pied de frappe", size=12)
         image_width = 160
         x_position = (pdf.w - image_width) / 2
         pdf.image(graphe2, x=x_position, w=image_width)
