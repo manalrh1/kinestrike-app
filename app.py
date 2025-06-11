@@ -646,7 +646,7 @@ elif st.session_state.etape == 6:
             st.rerun()
 
     # 🎯 Titre centré
-    st.markdown("<h2 style='text-align:center;'>🎯 Étape 6 : Détection automatique du ballon</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>Détection automatique du ballon</h2>", unsafe_allow_html=True)
     st.markdown("L’intelligence artificielle repère le ballon sur chaque image pour mesurer avec précision les distances et vitesses.")
 
     if "video_bytes" not in st.session_state:
@@ -1047,8 +1047,36 @@ elif st.session_state.etape == 7:
 
     st.markdown("### 📄 Rapport PDF")
 
-    # a) Préparation des noms et chemins
-    nom_joueuse = st.session_state.get("joueuse_selectionnee", "Nom non défini")
+    # 🔁 Synchroniser le nom et l'ID si une nouvelle joueuse a été ajoutée via formulaire
+    if "new_joueuse_data" in st.session_state:
+        nom = st.session_state.new_joueuse_data["nom"]
+        prenom = st.session_state.new_joueuse_data["prenom"]
+        categorie = st.session_state.new_joueuse_data["categorie"]
+
+        from data_storage import get_joueuses_par_coach, ajouter_joueuse
+
+        joueuses = get_joueuses_par_coach(st.session_state["username"])
+        existe = any(j[1] == nom and j[2] == prenom and j[3] == categorie for j in joueuses)
+
+        if not existe:
+            ajouter_joueuse(nom, prenom, categorie, st.session_state["username"])
+            joueuses = get_joueuses_par_coach(st.session_state["username"])  # Recharger
+
+        joueuse = next((j for j in joueuses if j[1] == nom and j[2] == prenom and j[3] == categorie), None)
+        if joueuse:
+            st.session_state.joueuse_id = joueuse[0]
+            st.session_state.joueuse_selectionnee = f"{prenom} {nom}"
+            st.session_state.categorie_joueuse = categorie
+
+        del st.session_state["new_joueuse_data"]
+
+    # a) Récupération sécurisée du nom
+    nom_joueuse = st.session_state.get("joueuse_selectionnee", None)
+    if not nom_joueuse or not isinstance(nom_joueuse, str) or nom_joueuse.strip() == "":
+        st.warning("⚠️ Nom de la joueuse non défini. Une valeur par défaut sera utilisée.")
+        nom_joueuse = "Joueuse_Inconnue"
+
+    # b) Type de geste
     type_long = st.session_state.get("type_geste", "Tir de cou-de-pied").strip()
     GESTE_TO_LABEL = {
         "Tir de cou-de-pied": "Instep",
@@ -1057,6 +1085,7 @@ elif st.session_state.etape == 7:
     }
     label_type_geste = GESTE_TO_LABEL.get(type_long, "Tir")
 
+    # c) Nom du fichier PDF
     nom_fichier_base = (
         nom_joueuse.replace(" ", "_")
         .replace("(", "")
@@ -1067,25 +1096,27 @@ elif st.session_state.etape == 7:
     date_str = datetime.now().strftime("%Y%m%d")
     nom_pdf = f"rapport_{label_type_geste.lower()}_{nom_fichier_base}_{date_str}.pdf"
 
+    # d) Chemins des images/graphes
     radar_path = "radar_notes.png"
     graphe1 = "graphe_vraie_sequence_proximale_distale_avec_labels.png"
     graphe2 = "graphe_vitesses_angulaires_jambe_pic_1_9s.png"
     image_path = "impact_pose.png"
 
-
+    # e) Génération du rapport PDF
     rapport_genere = False
     rapport_pdf_path = None
 
     if st.button("📥 Télécharger le rapport PDF", use_container_width=True):
+        details_score = {}  # Si tu n’as pas de sous-détail
         rapport_pdf_path = generer_rapport_pdf(
             notes_par_phase=notes_par_phase,
             score_global=score_global,
-            details_score={},
+            details_score=details_score,
             points_forts=points_forts,
             points_a_ameliorer=points_a_ameliorer,
             recommandations=recommandations,
             reco_globale=synthese_globale,
-            image_path=image_path,  # ← L’image annotée à l’impact, REGÉNÉRÉE JUSTE AVANT
+            image_path=image_path,
             graphe1=graphe1,
             graphe2=graphe2,
             radar_path=radar_path,
@@ -1093,10 +1124,9 @@ elif st.session_state.etape == 7:
             nom_joueuse=nom_joueuse,
             type_geste=label_type_geste
         )
-
         rapport_genere = True
 
-    # b) Affichage du bouton de téléchargement si le PDF a été généré
+    # f) Affichage bouton téléchargement
     if rapport_genere and rapport_pdf_path and os.path.exists(rapport_pdf_path):
         with open(rapport_pdf_path, "rb") as f:
             st.download_button(
@@ -1106,34 +1136,18 @@ elif st.session_state.etape == 7:
                 use_container_width=True
             )
 
-        # ==============================
-        # Enregistrement de l’analyse après génération du PDF
-        # ==============================
-
-        # PATCH sécurité: Toujours retrouver l'ID si absent (ou si mal propagé)
+        # g) Enregistrement dans la base
         if not st.session_state.get("joueuse_id"):
-            nom_complet = st.session_state.get("joueuse_selectionnee", "")
-            categorie = st.session_state.get("categorie_joueuse", None)
             from data_storage import get_joueuses_par_coach
             joueuses = get_joueuses_par_coach(st.session_state["username"])
             trouve = False
-            # 1) On tente nom complet + catégorie
             for j in joueuses:
                 jid, nom, prenom, cat, *_ = j
-                if f"{prenom} {nom}" == nom_complet and cat == categorie:
+                if f"{prenom} {nom}" == nom_joueuse:
                     st.session_state.joueuse_id = jid
+                    st.session_state.categorie_joueuse = cat
                     trouve = True
                     break
-            # 2) Sinon, nom seul
-            if not trouve and nom_complet:
-                for j in joueuses:
-                    jid, nom, prenom, cat, *_ = j
-                    if f"{prenom} {nom}" == nom_complet:
-                        st.session_state.joueuse_id = jid
-                        st.session_state.categorie_joueuse = cat
-                        trouve = True
-                        break
-            # 3) Sinon, prend la première joueuse du coach
             if not trouve and joueuses:
                 jid, nom, prenom, cat, *_ = joueuses[0]
                 st.session_state.joueuse_id = jid
@@ -1147,10 +1161,10 @@ elif st.session_state.etape == 7:
             st.error("❌ Joueuse introuvable. Analyse non enregistrée.")
             st.stop()
 
-        if not existe_analyse(joueuse_id, st.session_state.type_geste, date_now):
+        if not existe_analyse(joueuse_id, st.session_state["type_geste"], date_now):
             enregistrer_analyse(
                 joueuse_id=joueuse_id,
-                technique=st.session_state.type_geste,
+                technique=st.session_state["type_geste"],
                 date_analyse=date_now,
                 score_global=score_global,
                 rapport_pdf_path=rapport_pdf_path,
@@ -1161,4 +1175,4 @@ elif st.session_state.etape == 7:
             st.info("ℹ️ Une analyse identique vient d’être enregistrée.")
 
     elif rapport_genere:
-        st.error("Le rapport n'a pas pu être généré.")
+        st.error("❌ Le rapport n'a pas pu être généré.")

@@ -684,7 +684,7 @@ elif st.session_state.etape == 7:
             st.rerun()
 
     # 🎯 Titre d’étape
-    st.markdown("<h2 style='text-align:center;'>🧪 Étape 7 : Analyse biomécanique du geste</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>Analyse biomécanique du geste</h2>", unsafe_allow_html=True)
 
     type_geste = st.session_state.type_geste.lower()
 

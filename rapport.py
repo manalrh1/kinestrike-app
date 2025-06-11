@@ -186,14 +186,14 @@ def generer_rapport_pdf(notes_par_phase, score_global, details_score,
         pdf.ln(6)
 
     if os.path.exists(graphe1):
-        pdf.centered_title("Évolution des vitesses segmentaires (Kick Step + Impact)", size=12)
+        pdf.centered_title("Évolution des vitesses angulaires cuisse/jambe selon les phases ", size=12)
         image_width = 160
         x_position = (pdf.w - image_width) / 2
         pdf.image(graphe1, x=x_position, w=image_width)
         pdf.ln(6)
 
     if os.path.exists(graphe2):
-        pdf.centered_title("Évolution de la vitesse du pied de frappe", size=12)
+        pdf.centered_title("Dynamique des vitesses linéaires des segments (hanche, genou, cheville)", size=12)
         image_width = 160
         x_position = (pdf.w - image_width) / 2
         pdf.image(graphe2, x=x_position, w=image_width)

@@ -10,7 +10,6 @@ def analyse_biomeca_inside():
         decouper_activation_transfert,
         verifier_logique_vitesses_lineaires,
         verifier_logique_vitesses_angulaires,
-        estimer_px_to_m_depuis_hanche_genou
     )
     from extraction import extraire_donnees_biomecaniques
     from notation_inside import (
@@ -147,15 +146,6 @@ def analyse_biomeca_inside():
                     use_container_width=True
                 )
 
-    # Estimation px_to_m avec la vraie catégorie
-    categorie = st.session_state.get("categorie_joueuse", "U17")
-    px_to_m = None
-    for kp in donnees["keypoints_all"]:
-        px_to_m = estimer_px_to_m_depuis_hanche_genou(kp, pied_frappe=pied, categorie=categorie)
-        if px_to_m:
-            break
-    if not px_to_m:
-        px_to_m = 0.005  # Fallback réaliste
 
     pose_path = enregistrer_image_pose(donnees["keypoints_all"], t2, video_path)
     graph1, graph2 = tracer_graphiques_vitesses(
@@ -164,7 +154,7 @@ def analyse_biomeca_inside():
         phases=phases,
         pied_frappe=pied,
         fps=fps,
-        px_to_m=px_to_m
+        
     )
 
     st.subheader("📊 Visualisations graphiques")
@@ -368,60 +358,14 @@ def analyse_biomeca_instep():
         pied_frappe=pied
     )
 
-        # === 1. Initialisation et récupération des variables ===
-
-    # Chemin de la vidéo d'origine (modifie selon ton workflow si besoin)
-    video_path = st.session_state.get("video_path", "outputs/video_test.mp4")
-
-    # Keypoints extraits pour chaque frame
-    keypoints_all = st.session_state.get("keypoints_all", None)
-    if keypoints_all is None:
-        st.error("❌ Keypoints non définis. Impossible de générer la vidéo annotée.")
-        st.stop()
-
-    # Liste des phases (par frame)
-    phases = st.session_state.get("phases", None)
-    if phases is None:
-        st.error("❌ Les phases du tir ne sont pas définies.")
-        st.stop()
-
-    # Pied de frappe choisi par l'utilisateur ("droit" ou "gauche")
-    pied_frappe = st.session_state.get("pied_frappe", "droit").lower()
-
-    # Vérification de la vidéo source
-    if not os.path.exists(video_path):
-        st.error(f"❌ Vidéo source introuvable : {video_path}")
-        st.stop()
-
-    # === 2. Génération de la vidéo annotée ===
-
-    video_out_path = "video_squelette.mp4"  # nom de la vidéo générée (modifiable)
     video_out_path = generer_video_annotee(
         video_path=video_path,
         keypoints_all=keypoints_all,
         phases=phases,
-        pied_frappe=pied_frappe,
-        output_path=video_out_path,
+        pied_frappe="droit",  # ou "gauche"
+        output_path="video_squelette.mp4",
         ralenti=3
     )
-
-    # === 3. Affichage dans Streamlit et téléchargement ===
-
-    st.subheader("🎞️ Vidéo annotée avec squelette et phases")
-    if video_out_path and os.path.exists(video_out_path):
-        col1, col2, col3 = st.columns([3, 2, 3])
-        with col2:
-            with open(video_out_path, "rb") as f:
-                video_bytes = f.read()
-            st.video(video_bytes, format="video/mp4")
-            st.download_button(
-                "⬇️ Télécharger la vidéo annotée",
-                data=video_bytes,
-                file_name=os.path.basename(video_out_path),
-                use_container_width=True
-            )
-    else:
-        st.info("Vidéo annotée non disponible.")
 
     st.subheader("🎞️ Vidéo annotée avec squelette et erreurs d’articulations")
     if os.path.exists(video_out_path):
