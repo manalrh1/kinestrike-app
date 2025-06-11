@@ -129,8 +129,8 @@ RECOMMANDATIONS_GLOBALES = {
     "7-8.9": (
         "✅ Correct",
         "Le tir est globalement bien réalisé, avec une structure technique cohérente. "
-        "Quelques désajustements mineurs peuvent subsister (vitesse du pied non optimale, angle d’approche à affiner, "
-        "ou suivi à améliorer), mais le geste reste fonctionnel et efficace dans la majorité des cas. "
+        "Quelques désajustements mineurs peuvent subsister "
+        ", mais le geste reste fonctionnel et efficace dans la majorité des cas. "
         "Un travail ciblé sur certaines phases permettra de progresser rapidement."
     ),
     "9-10": (
